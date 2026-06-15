@@ -119,6 +119,11 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _displayNameCtrl;
+  late final TextEditingController _photoUrlCtrl;
+  late final TextEditingController _bioCtrl;
+  late final TextEditingController _careerGoalCtrl;
+  late final TextEditingController _skillsCtrl;
+
   late final TextEditingController _universityCtrl;
   late final TextEditingController _courseCtrl;
   late final TextEditingController _dailyGoalHoursCtrl;
@@ -132,6 +137,11 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   void initState() {
     super.initState();
     _displayNameCtrl = TextEditingController(text: widget.profile.displayName);
+    _photoUrlCtrl = TextEditingController(text: widget.profile.photoUrl);
+    _bioCtrl = TextEditingController(text: widget.profile.bio);
+    _careerGoalCtrl = TextEditingController(text: widget.profile.careerGoal);
+    _skillsCtrl = TextEditingController(text: widget.profile.skills.join(', '));
+
     _universityCtrl = TextEditingController(text: widget.profile.university);
     _courseCtrl = TextEditingController(text: widget.profile.course);
     _dailyGoalHoursCtrl =
@@ -140,7 +150,6 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
         TextEditingController(text: widget.profile.weeklyGoalHours.toString());
     _selectedSemester = widget.profile.semester > 0 ? widget.profile.semester : 1;
 
-    // Default or sanitize study time to match options list
     final origTime = widget.profile.preferredStudyTime;
     _selectedStudyTime =
         _studyTimeOptions.contains(origTime) ? origTime : 'Morning';
@@ -149,6 +158,10 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   @override
   void dispose() {
     _displayNameCtrl.dispose();
+    _photoUrlCtrl.dispose();
+    _bioCtrl.dispose();
+    _careerGoalCtrl.dispose();
+    _skillsCtrl.dispose();
     _universityCtrl.dispose();
     _courseCtrl.dispose();
     _dailyGoalHoursCtrl.dispose();
@@ -159,8 +172,19 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
 
+    // Parse skills from comma-separated string
+    final List<String> parsedSkills = _skillsCtrl.text
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
     final updated = widget.profile.copyWith(
       displayName: _displayNameCtrl.text.trim(),
+      photoUrl: _photoUrlCtrl.text.trim(),
+      bio: _bioCtrl.text.trim(),
+      careerGoal: _careerGoalCtrl.text.trim(),
+      skills: parsedSkills,
       university: _universityCtrl.text.trim(),
       course: _courseCtrl.text.trim(),
       semester: _selectedSemester,
@@ -200,6 +224,52 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
             },
           ),
           const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _photoUrlCtrl,
+            enabled: !widget.isLoading,
+            decoration: const InputDecoration(
+              labelText: 'Profile Picture URL',
+              prefixIcon: Icon(Icons.image_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _bioCtrl,
+            enabled: !widget.isLoading,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Biography',
+              prefixIcon: Icon(Icons.description_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _careerGoalCtrl,
+            enabled: !widget.isLoading,
+            decoration: const InputDecoration(
+              labelText: 'Career Goal',
+              prefixIcon: Icon(Icons.flag_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _skillsCtrl,
+            enabled: !widget.isLoading,
+            decoration: const InputDecoration(
+              labelText: 'Skills (comma-separated)',
+              helperText: 'e.g. Flutter, Firebase, Python, Coding',
+              prefixIcon: Icon(Icons.psychology_outlined),
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 24),
 
           // Section: Academic Profile
           _buildSectionHeader('Academic Profile'),
@@ -306,7 +376,6 @@ class _EditProfileFormState extends ConsumerState<_EditProfileForm> {
                     if (numVal < 0 || numVal > 168) {
                       return 'Must be 0-168 hrs';
                     }
-                    // Validate that weekly hours are consistent with daily hours
                     final dailyVal = double.tryParse(_dailyGoalHoursCtrl.text.trim());
                     if (dailyVal != null && numVal < dailyVal) {
                       return 'Must be >= Daily';

@@ -10,10 +10,14 @@ import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/activities/presentation/screens/activities_screen.dart';
 import '../../features/focus_timer/presentation/screens/focus_timer_screen.dart';
 import '../../features/goals/presentation/screens/goals_screen.dart';
+import '../../features/goals/presentation/screens/create_edit_goal_screen.dart';
 import '../../features/streaks/presentation/screens/streaks_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/profile/presentation/screens/edit_profile_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
+import '../../features/activities/presentation/screens/activity_detail_screen.dart';
+import '../../features/activities/presentation/screens/create_edit_activity_screen.dart';
 import 'navigation_scaffold.dart';
 import 'router_notifier.dart';
 
@@ -56,6 +60,41 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const EditProfileScreen(),
+      ),
+      // ── Settings ─────────────────────────────────────────────────────────
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      // ── Activities Extra ─────────────────────────────────────────────────
+      GoRoute(
+        path: '/activity/create',
+        builder: (context, state) => const CreateEditActivityScreen(),
+      ),
+      GoRoute(
+        path: '/activity/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ActivityDetailScreen(activityId: id);
+        },
+      ),
+      GoRoute(
+        path: '/activity/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateEditActivityScreen(editActivityId: id);
+        },
+      ),
+      GoRoute(
+        path: '/goals/create',
+        builder: (context, state) => const CreateEditGoalScreen(),
+      ),
+      GoRoute(
+        path: '/goals/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateEditGoalScreen(editGoalId: id);
+        },
       ),
       // ── Protected Shell (bottom nav tabs) ─────────────────────────────────
       ShellRoute(

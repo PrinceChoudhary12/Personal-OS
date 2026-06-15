@@ -7,7 +7,11 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
+<<<<<<< HEAD
 	<string>Personal Os</string>
+=======
+	<string>Personalos App</string>
+>>>>>>> 35d8ae8ea6bcc75ad0e526f9ce3a8b9a2bdf8a8d
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +19,11 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
+<<<<<<< HEAD
 	<string>personal_os</string>
+=======
+	<string>personalos_app</string>
+>>>>>>> 35d8ae8ea6bcc75ad0e526f9ce3a8b9a2bdf8a8d
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

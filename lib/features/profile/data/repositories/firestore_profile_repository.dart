@@ -25,17 +25,23 @@ class FirestoreProfileRepository implements ProfileRepository {
       if (!doc.exists) {
         // Create default profile if it doesn't exist yet
         final currentUser = _auth.currentUser;
+        final now = DateTime.now();
         final defaultProfile = UserProfile(
           uid: uid,
           email: currentUser?.email ?? '',
           displayName: currentUser?.displayName ?? 'Personal OS User',
+          photoUrl: currentUser?.photoURL ?? '',
           university: '',
           course: '',
           semester: 1,
+          skills: const [],
+          careerGoal: '',
+          bio: '',
           dailyGoalHours: 0.0,
           weeklyGoalHours: 0.0,
           preferredStudyTime: 'Morning',
-          updatedAt: DateTime.now(),
+          createdAt: now,
+          updatedAt: now,
         );
         await saveProfile(defaultProfile);
         return defaultProfile;
@@ -52,17 +58,23 @@ class FirestoreProfileRepository implements ProfileRepository {
       if (!doc.exists) {
         // Create default profile if it doesn't exist yet
         final currentUser = _auth.currentUser;
+        final now = DateTime.now();
         final defaultProfile = UserProfile(
           uid: uid,
           email: currentUser?.email ?? '',
           displayName: currentUser?.displayName ?? 'Personal OS User',
+          photoUrl: currentUser?.photoURL ?? '',
           university: '',
           course: '',
           semester: 1,
+          skills: const [],
+          careerGoal: '',
+          bio: '',
           dailyGoalHours: 0.0,
           weeklyGoalHours: 0.0,
           preferredStudyTime: 'Morning',
-          updatedAt: DateTime.now(),
+          createdAt: now,
+          updatedAt: now,
         );
         await saveProfile(defaultProfile);
         return defaultProfile;

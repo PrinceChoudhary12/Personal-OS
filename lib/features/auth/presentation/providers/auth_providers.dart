@@ -10,7 +10,10 @@ import '../../domain/repositories/auth_repository.dart';
 // ─── 1. Raw Firebase auth-state stream ────────────────────────────────────────
 // Used by the router redirect to cheaply know if a user is signed in.
 final firebaseAuthStateProvider = StreamProvider<fb.User?>((ref) {
-  return fb.FirebaseAuth.instance.authStateChanges();
+  return fb.FirebaseAuth.instance.authStateChanges().map((user) {
+    print('🔥 AUTH USER: ${user?.email}');
+    return user;
+  });
 });
 
 // ─── 2. AuthRepository — concrete Firebase implementation ─────────────────────

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../providers/profile_providers.dart';
 
@@ -14,20 +13,6 @@ class UserProfileScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(userProfileProvider);
-    final authState = ref.watch(authControllerProvider);
-
-    // Listen to sign out state to show errors if any
-    ref.listen<AsyncValue>(authControllerProvider, (_, state) {
-      state.whenOrNull(
-        error: (err, _) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sign out failed: $err'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        ),
-      );
-    });
 
     return Scaffold(
       appBar: AppBar(
@@ -37,6 +22,13 @@ class UserProfileScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/dashboard'),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Settings',
+            onPressed: () => context.push('/settings'),
+          ),
+        ],
       ),
       body: profileAsync.when(
         loading: () => const Center(
@@ -86,7 +78,6 @@ class UserProfileScreen extends ConsumerWidget {
             return const Center(child: Text('No profile found.'));
           }
 
-          // Initial letters of the name for avatar
           final nameInitials = profile.displayName.trim().isNotEmpty
               ? profile.displayName
                   .trim()
@@ -121,14 +112,19 @@ class UserProfileScreen extends ConsumerWidget {
                             CircleAvatar(
                               radius: 48,
                               backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                              child: Text(
-                                nameInitials,
-                                style: const TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
+                              backgroundImage: profile.photoUrl.isNotEmpty
+                                  ? NetworkImage(profile.photoUrl)
+                                  : null,
+                              child: profile.photoUrl.isEmpty
+                                  ? Text(
+                                      nameInitials,
+                                      style: const TextStyle(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.primary,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -149,6 +145,127 @@ class UserProfileScreen extends ConsumerWidget {
                                   ),
                               textAlign: TextAlign.center,
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- Bio & Career Goal Card ---
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.info_outline_rounded, color: AppColors.primary),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Bio & Goals',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            Text(
+                              'Biography',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              profile.bio.isNotEmpty
+                                  ? profile.bio
+                                  : 'No biography written yet. Click edit to add one!',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontStyle: profile.bio.isEmpty ? FontStyle.italic : null,
+                                  ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Career Goal',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    color: AppColors.primary,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              profile.careerGoal.isNotEmpty
+                                  ? profile.careerGoal
+                                  : 'No career goal specified.',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontStyle: profile.careerGoal.isEmpty ? FontStyle.italic : null,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- Skills Card ---
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.psychology_outlined, color: AppColors.secondary),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Skills & Expertise',
+                                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            profile.skills.isEmpty
+                                ? const Text(
+                                    'No skills listed yet.',
+                                    style: TextStyle(fontStyle: FontStyle.italic),
+                                  )
+                                : Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: profile.skills
+                                        .map((skill) => Chip(
+                                              label: Text(skill),
+                                              backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
+                                              side: BorderSide(
+                                                color: AppColors.secondary.withValues(alpha: 0.25),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
                           ],
                         ),
                       ),
@@ -269,79 +386,19 @@ class UserProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // --- Action Buttons ---
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: authState.isLoading
-                                ? null
-                                : () async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        title: const Text('Sign Out'),
-                                        content: const Text(
-                                            'Are you sure you want to sign out from Personal OS?'),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(ctx, false),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          FilledButton(
-                                            onPressed: () => Navigator.pop(ctx, true),
-                                            style: FilledButton.styleFrom(
-                                              backgroundColor: AppColors.error,
-                                            ),
-                                            child: const Text('Sign Out'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm == true && context.mounted) {
-                                      await ref
-                                          .read(authControllerProvider.notifier)
-                                          .signOut();
-                                    }
-                                  },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.error,
-                              side: const BorderSide(color: AppColors.error),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: authState.isLoading
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.error,
-                                    ),
-                                  )
-                                : const Icon(Icons.logout_rounded),
-                            label: const Text('Sign Out'),
-                          ),
+                    // --- Edit Button ---
+                    FilledButton.icon(
+                      onPressed: () => context.push('/profile/edit'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: FilledButton.icon(
-                            onPressed: () => context.push('/profile/edit'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Edit Profile'),
-                          ),
-                        ),
-                      ],
+                      ),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit Profile'),
                     ),
                   ],
                 ),

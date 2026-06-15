@@ -1,10 +1,18 @@
 # Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
+<<<<<<< HEAD
 project(personal_os LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "personal_os")
+=======
+project(personalos_app LANGUAGES CXX)
+
+# The name of the executable created for the application. Change this to change
+# the on-disk name of your application.
+set(BINARY_NAME "personalos_app")
+>>>>>>> 35d8ae8ea6bcc75ad0e526f9ce3a8b9a2bdf8a8d
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

@@ -1,4 +1,5 @@
 // lib/features/goals/domain/models/goal_model.dart
+
 class MilestoneModel {
   final String id;
   final String title;
@@ -19,6 +20,22 @@ class MilestoneModel {
       id: id ?? this.id,
       title: title ?? this.title,
       isCompleted: isCompleted ?? this.isCompleted,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory MilestoneModel.fromMap(Map<String, dynamic> map) {
+    return MilestoneModel(
+      id: map['id'] as String? ?? '',
+      title: map['title'] as String? ?? '',
+      isCompleted: map['isCompleted'] as bool? ?? false,
     );
   }
 }
@@ -67,6 +84,50 @@ class GoalModel {
       milestones: milestones ?? this.milestones,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userId': userId,
+      'title': title,
+      'description': description,
+      'targetDate': targetDate.toIso8601String(),
+      'progressPercentage': progressPercentage,
+      'milestones': milestones.map((m) => m.toMap()).toList(),
+      'status': status,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+
+  factory GoalModel.fromMap(Map<String, dynamic> map, String docId) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is String) {
+        return DateTime.tryParse(val) ?? DateTime.now();
+      }
+      try {
+        return (val as dynamic).toDate() as DateTime;
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+
+    final rawMilestones = map['milestones'] as List? ?? const [];
+    final List<MilestoneModel> parsedMilestones = rawMilestones
+        .map((m) => MilestoneModel.fromMap(Map<String, dynamic>.from(m as Map)))
+        .toList();
+
+    return GoalModel(
+      id: docId,
+      userId: map['userId'] as String? ?? '',
+      title: map['title'] as String? ?? '',
+      description: map['description'] as String? ?? '',
+      targetDate: parseDate(map['targetDate']),
+      progressPercentage: (map['progressPercentage'] as num?)?.toDouble() ?? 0.0,
+      milestones: parsedMilestones,
+      status: map['status'] as String? ?? 'Active',
+      createdAt: parseDate(map['createdAt']),
     );
   }
 }

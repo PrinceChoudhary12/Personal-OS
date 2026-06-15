@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # personal_os
+=======
+# personalos_app
+>>>>>>> 35d8ae8ea6bcc75ad0e526f9ce3a8b9a2bdf8a8d
 
 A new Flutter project.
 

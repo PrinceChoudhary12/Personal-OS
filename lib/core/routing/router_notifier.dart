@@ -6,9 +6,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/providers/auth_providers.dart';
 
-/// Temporary router notifier.
-/// Firebase is not configured yet, so we bypass auth checks
-/// and force Splash -> Login.
 class RouterNotifier extends ChangeNotifier {
   final Ref _ref;
 
@@ -19,38 +16,56 @@ class RouterNotifier extends ChangeNotifier {
     );
   }
 
-  /// Authentication state redirect logic.
   String? redirect(BuildContext context, GoRouterState state) {
     final authState = _ref.read(firebaseAuthStateProvider);
 
-    // If the auth state is still loading, wait on splash
+    final location = state.matchedLocation;
+
+    debugPrint('Current Route: $location');
+    debugPrint('User: ${authState.valueOrNull?.email}');
+    debugPrint('Loading: ${authState.isLoading}');
+
+    // Wait for Firebase auth initialization
     if (authState.isLoading) {
-      return '/splash';
+      if (location != '/splash') {
+        return '/splash';
+      }
+      return null;
     }
 
-    final hasUser = authState.valueOrNull != null;
-    final location = state.matchedLocation;
-    final isGoingToAuth = location == '/login' || location == '/signup';
-    final isGoingToSplash = location == '/splash';
+    final loggedIn = authState.valueOrNull != null;
 
-    if (!hasUser) {
-      // User is not signed in, force them to login if trying to access protected routes
-      if (!isGoingToAuth && !isGoingToSplash) {
+    // User NOT logged in
+    if (!loggedIn) {
+      final isAuthPage =
+          location == '/login' ||
+          location == '/signup' ||
+          location == '/splash';
+
+      if (!isAuthPage) {
         return '/login';
       }
-    } else {
-      // User is signed in, prevent them from going back to auth or splash screens
-      if (isGoingToAuth || isGoingToSplash) {
+
+      if (location == '/splash') {
+        return '/login';
+      }
+
+      return null;
+    }
+
+    // User logged in
+    if (loggedIn) {
+      if (location == '/login' ||
+          location == '/signup' ||
+          location == '/splash') {
         return '/dashboard';
       }
     }
 
-    // Allow navigation
     return null;
   }
 }
 
-/// Provider for RouterNotifier
 final routerNotifierProvider = Provider<RouterNotifier>((ref) {
   return RouterNotifier(ref);
 });

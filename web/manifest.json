@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "personal_os",
     "short_name": "personal_os",
+=======
+    "name": "personalos_app",
+    "short_name": "personalos_app",
+>>>>>>> 35d8ae8ea6bcc75ad0e526f9ce3a8b9a2bdf8a8d
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
