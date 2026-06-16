@@ -3,50 +3,60 @@
 class FocusSessionModel {
   final String id;
   final String userId;
-  final String? activityId;
-  final int durationMinutes;
   final DateTime startTime;
   final DateTime endTime;
-  final String outcomeStatus;
+  final int durationMinutes;
+  final String sessionType; // 'Pomodoro', 'Deep Work', 'Custom'
+  final bool completed;
+  final DateTime createdAt;
+  final String? activityId;
 
   const FocusSessionModel({
     required this.id,
     required this.userId,
-    this.activityId,
-    required this.durationMinutes,
     required this.startTime,
     required this.endTime,
-    required this.outcomeStatus,
+    required this.durationMinutes,
+    required this.sessionType,
+    required this.completed,
+    required this.createdAt,
+    this.activityId,
   });
 
   FocusSessionModel copyWith({
     String? id,
     String? userId,
-    String? activityId,
-    int? durationMinutes,
     DateTime? startTime,
     DateTime? endTime,
-    String? outcomeStatus,
+    int? durationMinutes,
+    String? sessionType,
+    bool? completed,
+    DateTime? createdAt,
+    String? activityId,
   }) {
     return FocusSessionModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
-      activityId: activityId ?? this.activityId,
-      durationMinutes: durationMinutes ?? this.durationMinutes,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
-      outcomeStatus: outcomeStatus ?? this.outcomeStatus,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      sessionType: sessionType ?? this.sessionType,
+      completed: completed ?? this.completed,
+      createdAt: createdAt ?? this.createdAt,
+      activityId: activityId ?? this.activityId,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'activityId': activityId,
-      'durationMinutes': durationMinutes,
       'startTime': startTime.toIso8601String(),
       'endTime': endTime.toIso8601String(),
-      'outcomeStatus': outcomeStatus,
+      'durationMinutes': durationMinutes,
+      'sessionType': sessionType,
+      'completed': completed,
+      'createdAt': createdAt.toIso8601String(),
+      'activityId': activityId,
     };
   }
 
@@ -66,11 +76,13 @@ class FocusSessionModel {
     return FocusSessionModel(
       id: docId,
       userId: map['userId'] as String? ?? '',
-      activityId: map['activityId'] as String?,
-      durationMinutes: map['durationMinutes'] as int? ?? 0,
       startTime: parseDate(map['startTime']),
       endTime: parseDate(map['endTime']),
-      outcomeStatus: map['outcomeStatus'] as String? ?? 'Completed',
+      durationMinutes: map['durationMinutes'] as int? ?? 0,
+      sessionType: map['sessionType'] as String? ?? 'Pomodoro',
+      completed: map['completed'] as bool? ?? false,
+      createdAt: parseDate(map['createdAt']),
+      activityId: map['activityId'] as String?,
     );
   }
 }

@@ -1,5 +1,6 @@
 // lib/features/auth/presentation/providers/auth_providers.dart
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,7 +12,7 @@ import '../../domain/repositories/auth_repository.dart';
 // Used by the router redirect to cheaply know if a user is signed in.
 final firebaseAuthStateProvider = StreamProvider<fb.User?>((ref) {
   return fb.FirebaseAuth.instance.authStateChanges().map((user) {
-    print('🔥 AUTH USER: ${user?.email}');
+    debugPrint('🔥 AUTH USER: ${user?.email}');
     return user;
   });
 });

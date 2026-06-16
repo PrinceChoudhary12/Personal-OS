@@ -1,13 +1,13 @@
 // lib/features/goals/presentation/providers/goals_controllers.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/repository_providers.dart';
 import '../../domain/models/goal_model.dart';
-import 'goals_providers.dart';
 
 class GoalsController extends AutoDisposeAsyncNotifier<void> {
   @override
   Future<void> build() async {
-    // Initial state is idle (AsyncData(null))
+    // Initial state is idle
   }
 
   Future<bool> createGoal(GoalModel goal) async {
@@ -16,6 +16,8 @@ class GoalsController extends AutoDisposeAsyncNotifier<void> {
       final repo = ref.read(goalRepositoryProvider);
       await repo.createGoal(goal);
       state = const AsyncValue.data(null);
+      // Trigger analytics calculations
+      await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(goal.userId);
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -29,6 +31,8 @@ class GoalsController extends AutoDisposeAsyncNotifier<void> {
       final repo = ref.read(goalRepositoryProvider);
       await repo.updateGoal(goal);
       state = const AsyncValue.data(null);
+      // Trigger analytics calculations
+      await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(goal.userId);
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -40,8 +44,11 @@ class GoalsController extends AutoDisposeAsyncNotifier<void> {
     state = const AsyncValue.loading();
     try {
       final repo = ref.read(goalRepositoryProvider);
+      final goal = await repo.getGoalById(id);
       await repo.deleteGoal(id);
       state = const AsyncValue.data(null);
+      // Trigger analytics calculations
+      await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(goal.userId);
       return true;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -49,34 +56,37 @@ class GoalsController extends AutoDisposeAsyncNotifier<void> {
     }
   }
 
-  Future<bool> toggleMilestone(GoalModel goal, String milestoneId, bool isCompleted) async {
-    // Toggling a milestone requires recalculating progress percentage and saving
-    final updatedMilestones = goal.milestones.map((m) {
-      if (m.id == milestoneId) {
-        return m.copyWith(isCompleted: isCompleted);
-      }
-      return m;
-    }).toList();
-
-    final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
-    final totalCount = updatedMilestones.length;
-    final double newProgress = totalCount > 0 
-        ? (completedCount / totalCount * 100.0) 
+  Future<bool> updateGoalProgress(GoalModel goal, double completedHours) async {
+    final progress = goal.targetHours > 0
+        ? (completedHours / goal.targetHours * 100.0).clamp(0.0, 100.0)
         : 0.0;
-
-    final String newStatus = newProgress >= 100.0 ? 'Completed' : 'Active';
+    final isCompleted = progress >= 100.0;
 
     final updatedGoal = goal.copyWith(
-      milestones: updatedMilestones,
-      progressPercentage: newProgress,
-      status: newStatus,
+      completedHours: completedHours,
+      progressPercentage: progress,
+      isCompleted: isCompleted,
+      status: isCompleted ? 'Completed' : goal.status == 'Completed' ? 'Active' : goal.status,
+      updatedAt: DateTime.now(),
     );
 
-    // Perform database update
+    return updateGoal(updatedGoal);
+  }
+
+  Future<bool> markGoalComplete(GoalModel goal) async {
+    final updatedGoal = goal.copyWith(
+      completedHours: goal.targetHours,
+      progressPercentage: 100.0,
+      isCompleted: true,
+      status: 'Completed',
+      updatedAt: DateTime.now(),
+    );
+
     return updateGoal(updatedGoal);
   }
 }
 
-final goalsControllerProvider = AutoDisposeAsyncNotifierProvider<GoalsController, void>(() {
+final goalsControllerProvider =
+    AutoDisposeAsyncNotifierProvider<GoalsController, void>(() {
   return GoalsController();
 });

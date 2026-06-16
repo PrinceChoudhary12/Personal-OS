@@ -8,44 +8,19 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../activities/domain/models/activity_model.dart';
 import '../../../activities/presentation/providers/activity_providers.dart';
 import '../../../focus_timer/domain/models/focus_session_model.dart';
-import '../../../focus_timer/presentation/providers/focus_session_providers.dart';
+import '../../../focus_timer/presentation/providers/focus_providers.dart';
 import '../../../goals/presentation/providers/goals_providers.dart';
+import '../../../goals/domain/models/goal_model.dart';
 import '../../../profile/presentation/providers/profile_providers.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../../core/providers/repository_providers.dart';
+import '../../../streaks/presentation/providers/streak_providers.dart';
+import '../../../analytics/presentation/providers/analytics_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
-  int _calculateStreak(List<ActivityModel> activities, List<FocusSessionModel> sessions) {
-    final dates = <DateTime>{};
-    for (final a in activities) {
-      dates.add(DateTime(a.startTime.year, a.startTime.month, a.startTime.day));
-    }
-    for (final s in sessions) {
-      dates.add(DateTime(s.startTime.year, s.startTime.month, s.startTime.day));
-    }
-    final sortedDates = dates.toList()..sort((a, b) => b.compareTo(a));
-    if (sortedDates.isEmpty) return 0;
 
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    if (sortedDates.first != today && sortedDates.first != yesterday) {
-      return 0;
-    }
-
-    int streak = 0;
-    var checkDate = sortedDates.first;
-    for (final date in sortedDates) {
-      if (date == checkDate) {
-        streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
-      } else if (date.isBefore(checkDate)) {
-        // Gap in streak
-        break;
-      }
-    }
-    return streak;
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +28,18 @@ class DashboardScreen extends ConsumerWidget {
     final activitiesAsync = ref.watch(activitiesStreamProvider);
     final sessionsAsync = ref.watch(focusSessionsStreamProvider);
     final goalsAsync = ref.watch(goalsStreamProvider);
+    final streakAsync = ref.watch(streakStreamProvider);
 
+    final user = ref.read(firebaseAuthStateProvider).valueOrNull;
+    if (user != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(streakRepositoryProvider).initializeStreak(user.uid);
+        ref.read(streakRepositoryProvider).calculateStreakFromActivities(user.uid);
+        ref.read(analyticsControllerProvider.notifier).syncAnalytics();
+      });
+    }
+
+    final streak = streakAsync.valueOrNull?.currentStreak ?? 0;
     final isWide = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
@@ -118,7 +104,7 @@ class DashboardScreen extends ConsumerWidget {
                             flex: 3,
                             child: Column(
                               children: [
-                                _buildStatsSummaryRow(context, activitiesAsync, sessionsAsync),
+                                _buildStatsSummaryRow(context, activitiesAsync, sessionsAsync, streak),
                                 const SizedBox(height: 16),
                                 _buildWeeklyProgressCard(context, sessionsAsync, profileAsync),
                                 const SizedBox(height: 16),
@@ -141,7 +127,7 @@ class DashboardScreen extends ConsumerWidget {
                       )
                     : Column(
                         children: [
-                          _buildStatsSummaryRow(context, activitiesAsync, sessionsAsync),
+                          _buildStatsSummaryRow(context, activitiesAsync, sessionsAsync, streak),
                           const SizedBox(height: 16),
                           _buildWeeklyProgressCard(context, sessionsAsync, profileAsync),
                           const SizedBox(height: 16),
@@ -165,6 +151,7 @@ class DashboardScreen extends ConsumerWidget {
     BuildContext context,
     AsyncValue<List<ActivityModel>> activitiesAsync,
     AsyncValue<List<FocusSessionModel>> sessionsAsync,
+    int streak,
   ) {
     final activities = activitiesAsync.valueOrNull ?? [];
     final sessions = sessionsAsync.valueOrNull ?? [];
@@ -173,45 +160,104 @@ class DashboardScreen extends ConsumerWidget {
     final today = DateTime(now.year, now.month, now.day);
 
     final todaySessions = sessions.where((s) => s.startTime.isAfter(today)).toList();
-    final todayFocusMinutes = todaySessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);
+    final todayFocusMinutes = todaySessions.where((s) => s.completed).fold<int>(0, (sum, s) => sum + s.durationMinutes);
+    final todaySessionsCount = todaySessions.where((s) => s.completed).length;
 
     final todayActivities = activities.where((a) => a.startTime.isAfter(today)).toList();
     final todayActivitiesCount = todayActivities.length;
 
-    final streak = _calculateStreak(activities, sessions);
-
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = (constraints.maxWidth - 32) / 3;
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildStatCard(
-              context,
-              width: cardWidth,
-              title: "Today's Focus",
-              value: '$todayFocusMinutes m',
-              icon: Icons.timer_outlined,
-              color: Colors.red,
-            ),
-            _buildStatCard(
-              context,
-              width: cardWidth,
-              title: "Logged Tasks",
-              value: '$todayActivitiesCount',
-              icon: Icons.checklist_outlined,
-              color: Colors.blue,
-            ),
-            _buildStatCard(
-              context,
-              width: cardWidth,
-              title: "Active Streak",
-              value: '$streak Days',
-              icon: Icons.local_fire_department_rounded,
-              color: Colors.orange,
-            ),
-          ],
-        );
+        final isNarrow = constraints.maxWidth < 600;
+        if (isNarrow) {
+          final cardWidth = (constraints.maxWidth - 16) / 2;
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildStatCard(
+                    context,
+                    width: cardWidth,
+                    title: "Today's Focus",
+                    value: '$todayFocusMinutes m',
+                    icon: Icons.timer_outlined,
+                    color: Colors.red,
+                  ),
+                  _buildStatCard(
+                    context,
+                    width: cardWidth,
+                    title: "Sessions Today",
+                    value: '$todaySessionsCount',
+                    icon: Icons.done_all_rounded,
+                    color: Colors.green,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildStatCard(
+                    context,
+                    width: cardWidth,
+                    title: "Logged Tasks",
+                    value: '$todayActivitiesCount',
+                    icon: Icons.checklist_outlined,
+                    color: Colors.blue,
+                  ),
+                  _buildStatCard(
+                    context,
+                    width: cardWidth,
+                    title: "Active Streak",
+                    value: '$streak Days',
+                    icon: Icons.local_fire_department_rounded,
+                    color: Colors.orange,
+                  ),
+                ],
+              ),
+            ],
+          );
+        } else {
+          final cardWidth = (constraints.maxWidth - 48) / 4;
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatCard(
+                context,
+                width: cardWidth,
+                title: "Today's Focus",
+                value: '$todayFocusMinutes m',
+                icon: Icons.timer_outlined,
+                color: Colors.red,
+              ),
+              _buildStatCard(
+                context,
+                width: cardWidth,
+                title: "Sessions Today",
+                value: '$todaySessionsCount',
+                icon: Icons.done_all_rounded,
+                color: Colors.green,
+              ),
+              _buildStatCard(
+                context,
+                width: cardWidth,
+                title: "Logged Tasks",
+                value: '$todayActivitiesCount',
+                icon: Icons.checklist_outlined,
+                color: Colors.blue,
+              ),
+              _buildStatCard(
+                context,
+                width: cardWidth,
+                title: "Active Streak",
+                value: '$streak Days',
+                icon: Icons.local_fire_department_rounded,
+                color: Colors.orange,
+              ),
+            ],
+          );
+        }
       },
     );
   }
@@ -343,7 +389,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   // --- GOALS PROGRESS CARD ---
-  Widget _buildGoalsProgressCard(BuildContext context, AsyncValue<dynamic> goalsAsync) {
+  Widget _buildGoalsProgressCard(BuildContext context, AsyncValue<List<GoalModel>> goalsAsync) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -357,24 +403,32 @@ class DashboardScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(Icons.flag_rounded, color: AppColors.secondary),
-                SizedBox(width: 8),
-                Text(
-                  'Goals Tracker',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                const Row(
+                  children: [
+                    Icon(Icons.flag_rounded, color: AppColors.secondary),
+                    SizedBox(width: 8),
+                    Text(
+                      'Goals Tracker',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.go('/goals'),
+                  child: const Text('View All'),
                 ),
               ],
             ),
-            const Divider(height: 20),
+            const Divider(height: 12),
             goalsAsync.when(
               loading: () => const Center(
                   child: CircularProgressIndicator(color: AppColors.secondary)),
               error: (err, _) => Text('Error loading goals: $err'),
               data: (goalsList) {
-                final goals = List.from(goalsList);
-                if (goals.isEmpty) {
+                if (goalsList.isEmpty) {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 12),
                     child: Text(
@@ -384,52 +438,157 @@ class DashboardScreen extends ConsumerWidget {
                   );
                 }
 
-                // Show top 3 goals
-                final displayGoals = goals.take(3).toList();
+                final totalGoals = goalsList.length;
+                final completedGoals = goalsList.where((g) => g.isCompleted).length;
+                final activeGoals = goalsList.where((g) => g.status == 'Active' && !g.isCompleted).length;
+                final completionRate = totalGoals > 0 ? (completedGoals / totalGoals * 100.0) : 0.0;
+
                 return Column(
-                  children: displayGoals.map((g) {
-                    final percent = (g.progressPercentage / 100.0).clamp(0.0, 1.0);
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  g.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Grid of 4 stats
+                    GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      childAspectRatio: 2.2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      children: [
+                        _buildGoalMiniStat(
+                          context,
+                          label: 'Total Goals',
+                          value: '$totalGoals',
+                          icon: Icons.tour_rounded,
+                          color: AppColors.primary,
+                        ),
+                        _buildGoalMiniStat(
+                          context,
+                          label: 'Completed',
+                          value: '$completedGoals',
+                          icon: Icons.check_circle_rounded,
+                          color: AppColors.success,
+                        ),
+                        _buildGoalMiniStat(
+                          context,
+                          label: 'Active',
+                          value: '$activeGoals',
+                          icon: Icons.run_circle_rounded,
+                          color: AppColors.accent,
+                        ),
+                        _buildGoalMiniStat(
+                          context,
+                          label: 'Completion %',
+                          value: '${completionRate.toStringAsFixed(0)}%',
+                          icon: Icons.pie_chart_rounded,
+                          color: Colors.purple,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // Display top active goal if any
+                    const Text(
+                      'Current Goals',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 8),
+                    ...goalsList.take(2).map((g) {
+                      final percent = (g.progressPercentage / 100.0).clamp(0.0, 1.0);
+                      Color pColor = AppColors.secondary;
+                      if (g.isCompleted) {
+                        pColor = AppColors.success;
+                      } else if (g.status == 'Abandoned') {
+                        pColor = Colors.grey;
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    g.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${g.progressPercentage.toStringAsFixed(0)}%',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(2),
-                            child: LinearProgressIndicator(
-                              value: percent,
-                              minHeight: 4,
-                              backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
-                              color: AppColors.secondary,
+                                Text(
+                                  '${g.completedHours.toStringAsFixed(0)}/${g.targetHours.toStringAsFixed(0)} hrs (${g.progressPercentage.toStringAsFixed(0)}%)',
+                                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
+                            const SizedBox(height: 4),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(2),
+                              child: LinearProgressIndicator(
+                                value: percent,
+                                minHeight: 4,
+                                backgroundColor: pColor.withValues(alpha: 0.1),
+                                color: pColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
                 );
               },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGoalMiniStat(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withValues(alpha: 0.1),
+            radius: 16,
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 9, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

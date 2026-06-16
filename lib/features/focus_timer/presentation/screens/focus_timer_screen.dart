@@ -5,11 +5,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../activities/presentation/providers/activity_providers.dart';
-import '../providers/focus_session_providers.dart';
-import '../providers/timer_notifier.dart';
+import '../../domain/models/focus_session_model.dart';
+import '../providers/focus_providers.dart';
+import '../providers/focus_controller.dart';
 
-class FocusTimerScreen extends ConsumerWidget {
+class FocusTimerScreen extends ConsumerStatefulWidget {
   const FocusTimerScreen({super.key});
+
+  @override
+  ConsumerState<FocusTimerScreen> createState() => _FocusTimerScreenState();
+}
+
+class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with SingleTickerProviderStateMixin {
+  late TabController _historyTabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _historyTabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _historyTabController.dispose();
+    super.dispose();
+  }
 
   String _formatTime(int totalSeconds) {
     final minutes = totalSeconds ~/ 60;
@@ -21,10 +41,60 @@ class FocusTimerScreen extends ConsumerWidget {
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
+  String _formatDate(DateTime dt) {
+    return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
+
+  void _showCustomDurationDialog(BuildContext context, FocusController controller) {
+    final textController = TextEditingController(text: '30');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Custom Focus Timer'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter duration in minutes (1 - 180):'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: textController,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                suffixText: 'mins',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final mins = int.tryParse(textController.text) ?? 30;
+              if (mins > 0 && mins <= 180) {
+                controller.setCustomDurationSeconds(mins * 60);
+              }
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Set Timer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final timerState = ref.watch(timerNotifierProvider);
-    final timerNotifier = ref.read(timerNotifierProvider.notifier);
+  Widget build(BuildContext context) {
+    final timerState = ref.watch(focusControllerProvider);
+    final timerNotifier = ref.read(focusControllerProvider.notifier);
     
     final activitiesAsync = ref.watch(activitiesStreamProvider);
     final sessionsAsync = ref.watch(focusSessionsStreamProvider);
@@ -52,6 +122,11 @@ class FocusTimerScreen extends ConsumerWidget {
                 Text(
                   'Duration: ${timerState.initialDurationSeconds ~/ 60} minutes',
                   style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Session Type: ${timerState.sessionType}',
+                  style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 const Text('Your session has been logged in Firestore.'),
@@ -88,11 +163,11 @@ class FocusTimerScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(24.0),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
+            constraints: const BoxConstraints(maxWidth: 800),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // --- Timer Clock Container ---
+                // --- Timer Clock Card ---
                 Card(
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -140,48 +215,51 @@ class FocusTimerScreen extends ConsumerWidget {
                                     color: timerState.isRunning ? AppColors.primary : Colors.grey,
                                   ),
                                 ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Type: ${timerState.sessionType}',
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
                               ],
                             ),
                           ],
                         ),
                         const SizedBox(height: 28),
 
-                        // Preset Toggles
+                        // Preset Options
                         if (!timerState.isRunning && !timerState.isPaused) ...[
-                          Wrap(
-                            spacing: 8,
-                            alignment: WrapAlignment.center,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _PresetButton(
-                                label: '10s Test',
-                                seconds: 10,
-                                isSelected: timerState.initialDurationSeconds == 10,
-                                onSelect: () => timerNotifier.setCustomDurationSeconds(10),
+                              ChoiceChip(
+                                label: const Text('25m Pomodoro'),
+                                selected: timerState.initialDurationSeconds == 25 * 60 && timerState.sessionType == 'Pomodoro',
+                                onSelected: (_) => timerNotifier.setPreset(25, 'Pomodoro'),
+                                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                                checkmarkColor: AppColors.primary,
                               ),
-                              _PresetButton(
-                                label: '25m',
-                                seconds: 25 * 60,
-                                isSelected: timerState.initialDurationSeconds == 25 * 60,
-                                onSelect: () => timerNotifier.setPreset(25),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('50m Deep Work'),
+                                selected: timerState.initialDurationSeconds == 50 * 60 && timerState.sessionType == 'Deep Work',
+                                onSelected: (_) => timerNotifier.setPreset(50, 'Deep Work'),
+                                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                                checkmarkColor: AppColors.primary,
                               ),
-                              _PresetButton(
-                                label: '45m',
-                                seconds: 45 * 60,
-                                isSelected: timerState.initialDurationSeconds == 45 * 60,
-                                onSelect: () => timerNotifier.setPreset(45),
-                              ),
-                              _PresetButton(
-                                label: '60m',
-                                seconds: 60 * 60,
-                                isSelected: timerState.initialDurationSeconds == 60 * 60,
-                                onSelect: () => timerNotifier.setPreset(60),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('Custom'),
+                                selected: timerState.sessionType == 'Custom',
+                                onSelected: (_) => _showCustomDurationDialog(context, timerNotifier),
+                                selectedColor: AppColors.primary.withValues(alpha: 0.2),
+                                checkmarkColor: AppColors.primary,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 20),
                         ],
 
-                        // Action Buttons
+                        // Control Buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -189,11 +267,11 @@ class FocusTimerScreen extends ConsumerWidget {
                               ElevatedButton.icon(
                                 onPressed: timerNotifier.startTimer,
                                 icon: const Icon(Icons.play_arrow_rounded),
-                                label: const Text('Start Session'),
+                                label: const Text('Start Timer'),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
@@ -205,17 +283,27 @@ class FocusTimerScreen extends ConsumerWidget {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.accent,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                onPressed: timerNotifier.stopTimer,
+                                icon: const Icon(Icons.stop_rounded),
+                                label: const Text('Stop'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: timerNotifier.resetTimer,
-                                icon: const Icon(Icons.stop_rounded),
+                                icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('Reset'),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
@@ -228,17 +316,27 @@ class FocusTimerScreen extends ConsumerWidget {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 8),
+                              OutlinedButton.icon(
+                                onPressed: timerNotifier.stopTimer,
+                                icon: const Icon(Icons.stop_rounded),
+                                label: const Text('Stop'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: timerNotifier.resetTimer,
-                                icon: const Icon(Icons.stop_rounded),
+                                icon: const Icon(Icons.refresh_rounded),
                                 label: const Text('Reset'),
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
                               ),
@@ -313,76 +411,98 @@ class FocusTimerScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 24),
 
-                // --- History Header ---
-                Text(
-                  'Focus History',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 12),
-
-                // --- Recent focus sessions completed ---
+                // --- History and Statistics Section ---
                 sessionsAsync.when(
                   loading: () => const Center(
                     child: CircularProgressIndicator(color: AppColors.primary),
                   ),
                   error: (err, _) => Text('Error loading history: $err'),
                   data: (sessionsList) {
-                    if (sessionsList.isEmpty) {
-                      return Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(
-                            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'No focus sessions logged yet. Complete a Pomodoro session to log focus hours!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                          ),
-                        ),
-                      );
-                    }
+                    final now = DateTime.now();
+                    final todayStart = DateTime(now.year, now.month, now.day);
+                    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+                    final weekStartStart = DateTime(weekStart.year, weekStart.month, weekStart.day);
 
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: sessionsList.length,
-                      itemBuilder: (context, index) {
-                        final session = sessionsList[index];
-                        return Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(
-                              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+                    final todaySessions = sessionsList.where((s) => s.startTime.isAfter(todayStart)).toList();
+                    final weeklySessions = sessionsList.where((s) => s.startTime.isAfter(weekStartStart)).toList();
+
+                    final totalFocusMinutes = sessionsList.where((s) => s.completed).fold<int>(0, (sum, s) => sum + s.durationMinutes);
+                    final todayFocusMinutes = todaySessions.where((s) => s.completed).fold<int>(0, (sum, s) => sum + s.durationMinutes);
+                    final weeklyFocusMinutes = weeklySessions.where((s) => s.completed).fold<int>(0, (sum, s) => sum + s.durationMinutes);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // --- Metric Cards ---
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildMetricMiniCard(
+                                title: "Today's Focus",
+                                value: "$todayFocusMinutes min",
+                                icon: Icons.today,
+                                color: Colors.orange,
+                              ),
                             ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildMetricMiniCard(
+                                title: "This Week",
+                                value: "${(weeklyFocusMinutes / 60.0).toStringAsFixed(1)} hrs",
+                                icon: Icons.date_range,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _buildMetricMiniCard(
+                                title: "Total Focus",
+                                value: "$totalFocusMinutes min",
+                                icon: Icons.hourglass_empty,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- Session History Tabs ---
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Session History',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        
+                        TabBar(
+                          controller: _historyTabController,
+                          indicatorColor: AppColors.primary,
+                          labelColor: AppColors.primary,
+                          unselectedLabelColor: Colors.grey,
+                          tabs: const [
+                            Tab(text: "Today's Sessions"),
+                            Tab(text: "Weekly Sessions"),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        SizedBox(
+                          height: 300,
+                          child: TabBarView(
+                            controller: _historyTabController,
+                            children: [
+                              _buildSessionList(context, todaySessions),
+                              _buildSessionList(context, weeklySessions),
+                            ],
                           ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.red.withValues(alpha: 0.1),
-                              child: const Icon(Icons.timer, color: Colors.red),
-                            ),
-                            title: Text(
-                              '${session.durationMinutes} Minutes Focused',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              'Started at ${_formatDateTime(session.startTime)} • ${session.outcomeStatus}',
-                            ),
-                            trailing: Text(
-                              '${session.startTime.year}-${session.startTime.month.toString().padLeft(2, '0')}-${session.startTime.day.toString().padLeft(2, '0')}',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ),
-                        );
-                      },
+                        ),
+                      ],
                     );
                   },
                 ),
@@ -393,33 +513,102 @@ class FocusTimerScreen extends ConsumerWidget {
       ),
     );
   }
-}
 
-class _PresetButton extends StatelessWidget {
-  final String label;
-  final int seconds;
-  final bool isSelected;
-  final VoidCallback onSelect;
-
-  const _PresetButton({
-    required this.label,
-    required this.seconds,
-    required this.isSelected,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => onSelect(),
-      selectedColor: AppColors.primary.withValues(alpha: 0.2),
-      checkmarkColor: AppColors.primary,
-      labelStyle: TextStyle(
-        color: isSelected ? AppColors.primary : null,
-        fontWeight: isSelected ? FontWeight.bold : null,
+  Widget _buildMetricMiniCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withValues(alpha: 0.1),
+              radius: 16,
+              child: Icon(icon, color: color, size: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            Text(
+              title,
+              style: const TextStyle(color: Colors.grey, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionList(BuildContext context, List<FocusSessionModel> sessions) {
+    if (sessions.isEmpty) {
+      return Center(
+        child: Text(
+          'No focus sessions in this period.',
+          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[600]),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: sessions.length,
+      itemBuilder: (context, index) {
+        final s = sessions[index];
+        final outcomeText = s.completed ? 'Completed' : 'Interrupted';
+        final outcomeColor = s.completed ? Colors.green : Colors.red;
+        final icon = s.completed ? Icons.check_circle_rounded : Icons.cancel_rounded;
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: outcomeColor.withValues(alpha: 0.1),
+              child: Icon(Icons.timer, color: outcomeColor),
+            ),
+            title: Text(
+              '${s.durationMinutes} Minutes Focused (${s.sessionType})',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              'Started at ${_formatDateTime(s.startTime)} • $outcomeText',
+              style: TextStyle(color: outcomeColor),
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Icon(icon, color: outcomeColor, size: 18),
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(s.startTime),
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

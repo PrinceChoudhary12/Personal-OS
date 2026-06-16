@@ -7,77 +7,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../activities/domain/models/activity_model.dart';
 import '../../../activities/presentation/providers/activity_providers.dart';
 import '../../../focus_timer/domain/models/focus_session_model.dart';
-import '../../../focus_timer/presentation/providers/focus_session_providers.dart';
+import '../../../focus_timer/presentation/providers/focus_providers.dart';
 import '../../../goals/domain/models/goal_model.dart';
 import '../../../goals/presentation/providers/goals_providers.dart';
+import '../providers/streak_providers.dart';
 
 class StreaksScreen extends ConsumerWidget {
   const StreaksScreen({super.key});
 
-  int _calculateActiveStreak(List<ActivityModel> activities, List<FocusSessionModel> sessions) {
-    final dates = <DateTime>{};
-    for (final a in activities) {
-      dates.add(DateTime(a.startTime.year, a.startTime.month, a.startTime.day));
-    }
-    for (final s in sessions) {
-      dates.add(DateTime(s.startTime.year, s.startTime.month, s.startTime.day));
-    }
-    final sortedDates = dates.toList()..sort((a, b) => b.compareTo(a));
-    if (sortedDates.isEmpty) return 0;
 
-    final today = DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    if (sortedDates.first != today && sortedDates.first != yesterday) {
-      return 0;
-    }
-
-    int streak = 0;
-    var checkDate = sortedDates.first;
-    for (final date in sortedDates) {
-      if (date == checkDate) {
-        streak++;
-        checkDate = checkDate.subtract(const Duration(days: 1));
-      } else if (date.isBefore(checkDate)) {
-        break;
-      }
-    }
-    return streak;
-  }
-
-  int _calculateLongestStreak(List<ActivityModel> activities, List<FocusSessionModel> sessions) {
-    final dates = <DateTime>{};
-    for (final a in activities) {
-      dates.add(DateTime(a.startTime.year, a.startTime.month, a.startTime.day));
-    }
-    for (final s in sessions) {
-      dates.add(DateTime(s.startTime.year, s.startTime.month, s.startTime.day));
-    }
-    final sortedDates = dates.toList()..sort((a, b) => a.compareTo(b));
-    if (sortedDates.isEmpty) return 0;
-
-    int longest = 0;
-    int current = 0;
-    DateTime? prevDate;
-
-    for (final date in sortedDates) {
-      if (prevDate == null) {
-        current = 1;
-      } else {
-        final diff = date.difference(prevDate).inDays;
-        if (diff == 1) {
-          current++;
-        } else if (diff > 1) {
-          if (current > longest) longest = current;
-          current = 1;
-        }
-      }
-      prevDate = date;
-    }
-
-    if (current > longest) longest = current;
-    return longest;
-  }
 
   // Generate 30 days list mapping to total minutes logged on each day
   Map<DateTime, int> _generateDailyMinutes(List<ActivityModel> activities, List<FocusSessionModel> sessions) {
@@ -103,6 +41,7 @@ class StreaksScreen extends ConsumerWidget {
     final activitiesAsync = ref.watch(activitiesStreamProvider);
     final sessionsAsync = ref.watch(focusSessionsStreamProvider);
     final goalsAsync = ref.watch(goalsStreamProvider);
+    final streakAsync = ref.watch(streakStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -114,90 +53,85 @@ class StreaksScreen extends ConsumerWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // --- Core Stats Row ---
-                activitiesAsync.when(
+            child: activitiesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+              error: (err, _) => Text('Error: $err'),
+              data: (activities) {
+                return sessionsAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
                   error: (err, _) => Text('Error: $err'),
-                  data: (activities) {
-                    return sessionsAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                      error: (err, _) => Text('Error: $err'),
-                      data: (sessions) {
-                        final activeStreak = _calculateActiveStreak(activities, sessions);
-                        final longestStreak = _calculateLongestStreak(activities, sessions);
-                        final totalMinutes = sessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);
-                        final double totalHours = totalMinutes / 60.0;
-                        final totalTasks = activities.length;
+                  data: (sessions) {
+                    final streak = streakAsync.valueOrNull;
+                    final activeStreak = streak?.currentStreak ?? 0;
+                    final longestStreak = streak?.longestStreak ?? 0;
+                    final missedDays = streak?.missedDaysInLast30Days ?? 0;
+                    final totalMinutes = sessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);
+                    final double totalHours = totalMinutes / 60.0;
 
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Main Cards Grid
+                        Row(
                           children: [
-                            // Main Cards Grid
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildStreakSummaryCard(
-                                    context,
-                                    title: 'Active Streak',
-                                    value: '$activeStreak Days',
-                                    icon: Icons.local_fire_department_rounded,
-                                    color: Colors.orange,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildStreakSummaryCard(
-                                    context,
-                                    title: 'Longest Streak',
-                                    value: '$longestStreak Days',
-                                    icon: Icons.workspace_premium_rounded,
-                                    color: Colors.amber,
-                                  ),
-                                ),
-                              ],
+                            Expanded(
+                              child: _buildStreakSummaryCard(
+                                context,
+                                title: 'Active Streak',
+                                value: '$activeStreak Days',
+                                icon: Icons.local_fire_department_rounded,
+                                color: Colors.orange,
+                              ),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildStreakSummaryCard(
-                                    context,
-                                    title: 'Focus Time',
-                                    value: '${totalHours.toStringAsFixed(1)} hrs',
-                                    icon: Icons.hourglass_empty_rounded,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _buildStreakSummaryCard(
-                                    context,
-                                    title: 'Total Tasks',
-                                    value: '$totalTasks Logged',
-                                    icon: Icons.playlist_add_check_rounded,
-                                    color: Colors.blue,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStreakSummaryCard(
+                                context,
+                                title: 'Longest Streak',
+                                value: '$longestStreak Days',
+                                icon: Icons.workspace_premium_rounded,
+                                color: Colors.amber,
+                              ),
                             ),
-                            const SizedBox(height: 24),
-
-                            // --- 30-Day Contribution Grid ---
-                            _buildContributionSection(context, activities, sessions),
-                            const SizedBox(height: 24),
-
-                            // --- Badges Achievements ---
-                            _buildAchievementsSection(context, activeStreak, longestStreak, sessions, activities, goalsAsync),
                           ],
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStreakSummaryCard(
+                                context,
+                                title: 'Focus Time',
+                                value: '${totalHours.toStringAsFixed(1)} hrs',
+                                icon: Icons.hourglass_empty_rounded,
+                                color: Colors.red,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStreakSummaryCard(
+                                context,
+                                title: 'Missed Days',
+                                value: '$missedDays Days',
+                                icon: Icons.calendar_today_rounded,
+                                color: Colors.blue,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // --- 30-Day Contribution Grid ---
+                        _buildContributionSection(context, activities, sessions),
+                        const SizedBox(height: 24),
+
+                        // --- Badges Achievements ---
+                        _buildAchievementsSection(context, activeStreak, longestStreak, sessions, activities, goalsAsync),
+                      ],
                     );
                   },
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),

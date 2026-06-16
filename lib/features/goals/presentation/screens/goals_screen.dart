@@ -18,23 +18,12 @@ class GoalsScreen extends ConsumerStatefulWidget {
 }
 
 class _GoalsScreenState extends ConsumerState<GoalsScreen> {
-  final Set<String> _expandedGoalIds = {};
-
   String _formatDate(DateTime dt) {
     return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
   }
 
-  void _toggleExpanded(String id) {
-    setState(() {
-      if (_expandedGoalIds.contains(id)) {
-        _expandedGoalIds.remove(id);
-      } else {
-        _expandedGoalIds.add(id);
-      }
-    });
-  }
-
   Future<void> _confirmDelete(BuildContext context, GoalModel goal) async {
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -47,7 +36,10 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Delete'),
           ),
         ],
@@ -57,10 +49,34 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     if (confirmed == true && mounted) {
       final success = await ref.read(goalsControllerProvider.notifier).deleteGoal(goal.id);
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Goal deleted successfully')),
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Goal deleted successfully'),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       }
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Study':
+        return Icons.school_outlined;
+      case 'Coding':
+        return Icons.code_rounded;
+      case 'Reading':
+        return Icons.menu_book_rounded;
+      case 'Gym':
+        return Icons.fitness_center_rounded;
+      case 'Sleep':
+        return Icons.bedtime_outlined;
+      case 'Meeting':
+        return Icons.people_outline_rounded;
+      case 'Project':
+        return Icons.assignment_outlined;
+      default:
+        return Icons.flag_outlined;
     }
   }
 
@@ -157,7 +173,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'Create a goal and break it down into milestones!',
+                                    'Create a new goal and start logging your progress hours!',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(color: Theme.of(context).hintColor),
                                   ),
@@ -172,12 +188,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                           itemCount: filteredGoals.length,
                           itemBuilder: (context, index) {
                             final goal = filteredGoals[index];
-                            final isExpanded = _expandedGoalIds.contains(goal.id);
-                            final completedMilestones = goal.milestones.where((m) => m.isCompleted).length;
-                            final totalMilestones = goal.milestones.length;
 
                             Color statusColor = AppColors.primary;
-                            if (goal.status == 'Completed') {
+                            if (goal.status == 'Completed' || goal.isCompleted) {
                               statusColor = AppColors.success;
                             } else if (goal.status == 'Abandoned') {
                               statusColor = Colors.grey;
@@ -201,6 +214,12 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                     Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
+                                        CircleAvatar(
+                                          backgroundColor: statusColor.withValues(alpha: 0.1),
+                                          foregroundColor: statusColor,
+                                          child: Icon(_getCategoryIcon(goal.category)),
+                                        ),
+                                        const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,7 +233,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                                       borderRadius: BorderRadius.circular(4),
                                                     ),
                                                     child: Text(
-                                                      goal.status,
+                                                      goal.isCompleted ? 'Completed' : goal.status,
                                                       style: TextStyle(
                                                         fontSize: 11,
                                                         fontWeight: FontWeight.bold,
@@ -224,17 +243,21 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
-                                                    'Target: ${_formatDate(goal.targetDate)}',
-                                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                                    goal.category,
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w500,
+                                                      color: Colors.grey,
+                                                    ),
                                                   ),
                                                 ],
                                               ),
-                                              const SizedBox(height: 8),
+                                              const SizedBox(height: 6),
                                               Text(
                                                 goal.title,
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.bold,
-                                                  fontSize: 18,
+                                                  fontSize: 16,
                                                 ),
                                               ),
                                             ],
@@ -267,7 +290,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                                 ],
                                               ),
                                             ),
-                                            if (goal.status == 'Active')
+                                            if (goal.status == 'Active' && !goal.isCompleted)
                                               const PopupMenuItem(
                                                 value: 'abandon',
                                                 child: Row(
@@ -305,7 +328,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                     ),
 
                                     if (goal.description.isNotEmpty) ...[
-                                      const SizedBox(height: 8),
+                                      const SizedBox(height: 12),
                                       Text(
                                         goal.description,
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -316,7 +339,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
 
                                     const SizedBox(height: 16),
 
-                                    // Progress Bar
+                                    // Progress Bar and Details
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
@@ -325,8 +348,8 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                                         ),
                                         Text(
-                                          '$completedMilestones / $totalMilestones Milestones',
-                                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                          '${goal.completedHours.toStringAsFixed(1)} / ${goal.targetHours.toStringAsFixed(1)} hrs',
+                                          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
                                         ),
                                       ],
                                     ),
@@ -334,79 +357,64 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(4),
                                       child: LinearProgressIndicator(
-                                        value: goal.progressPercentage / 100.0,
-                                        minHeight: 6,
+                                        value: (goal.progressPercentage / 100.0).clamp(0.0, 1.0),
+                                        minHeight: 8,
                                         backgroundColor: statusColor.withValues(alpha: 0.1),
                                         color: statusColor,
                                       ),
                                     ),
 
-                                    // Milestones List Toggle
-                                    if (totalMilestones > 0) ...[
-                                      const SizedBox(height: 8),
-                                      InkWell(
-                                        onTap: () => _toggleExpanded(goal.id),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              Icon(
-                                                isExpanded
-                                                    ? Icons.keyboard_arrow_up_rounded
-                                                    : Icons.keyboard_arrow_down_rounded,
-                                                size: 20,
-                                                color: AppColors.primary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                isExpanded ? 'Hide Milestones' : 'Show Milestones',
-                                                style: const TextStyle(
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ],
+                                    // Interactive Quick Hours adjustment
+                                    if (goal.status == 'Active' && !goal.isCompleted) ...[
+                                      const Divider(height: 24),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          const Text(
+                                            'Quick Log:',
+                                            style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
                                           ),
+                                          const SizedBox(width: 8),
+                                          IconButton(
+                                            icon: const Icon(Icons.remove_circle_outline_rounded, size: 20),
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: goal.completedHours > 0
+                                                ? () => ref.read(goalsControllerProvider.notifier).updateGoalProgress(
+                                                    goal,
+                                                    (goal.completedHours - 1.0).clamp(0.0, goal.targetHours),
+                                                  )
+                                                : null,
+                                            tooltip: 'Remove 1 hour',
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                                            visualDensity: VisualDensity.compact,
+                                            onPressed: goal.completedHours < goal.targetHours
+                                                ? () => ref.read(goalsControllerProvider.notifier).updateGoalProgress(
+                                                    goal,
+                                                    (goal.completedHours + 1.0).clamp(0.0, goal.targetHours),
+                                                  )
+                                                : null,
+                                            tooltip: 'Add 1 hour',
+                                          ),
+                                          const SizedBox(width: 8),
+                                          TextButton.icon(
+                                            icon: const Icon(Icons.check_circle_outline_rounded, size: 18, color: AppColors.success),
+                                            label: const Text('Complete', style: TextStyle(color: AppColors.success, fontSize: 12)),
+                                            onPressed: () => ref.read(goalsControllerProvider.notifier).markGoalComplete(goal),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else ...[
+                                      const SizedBox(height: 8),
+                                      Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Text(
+                                          'Updated: ${_formatDate(goal.updatedAt)}',
+                                          style: const TextStyle(fontSize: 11, color: Colors.grey, fontStyle: FontStyle.italic),
                                         ),
                                       ),
-                                      if (isExpanded) ...[
-                                        const Divider(),
-                                        ListView.builder(
-                                          shrinkWrap: true,
-                                          physics: const NeverScrollableScrollPhysics(),
-                                          itemCount: totalMilestones,
-                                          itemBuilder: (context, mIdx) {
-                                            final milestone = goal.milestones[mIdx];
-                                            return CheckboxListTile(
-                                              dense: true,
-                                              contentPadding: EdgeInsets.zero,
-                                              title: Text(
-                                                milestone.title,
-                                                style: TextStyle(
-                                                  decoration: milestone.isCompleted
-                                                      ? TextDecoration.lineThrough
-                                                      : TextDecoration.none,
-                                                  color: milestone.isCompleted
-                                                      ? Colors.grey
-                                                      : Theme.of(context).textTheme.bodyMedium?.color,
-                                                ),
-                                              ),
-                                              value: milestone.isCompleted,
-                                              onChanged: (newVal) async {
-                                                if (newVal != null) {
-                                                  await ref
-                                                      .read(goalsControllerProvider.notifier)
-                                                      .toggleMilestone(goal, milestone.id, newVal);
-                                                }
-                                              },
-                                              activeColor: statusColor,
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ],
+                                    ]
                                   ],
                                 ),
                               ),
@@ -421,9 +429,9 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
             ),
           ),
           if (controllerState.isLoading)
-             Container(
+            Container(
               color: Colors.black26,
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               ),
             ),

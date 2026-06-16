@@ -1,66 +1,32 @@
 // lib/features/goals/domain/models/goal_model.dart
 
-class MilestoneModel {
-  final String id;
-  final String title;
-  final bool isCompleted;
-
-  const MilestoneModel({
-    required this.id,
-    required this.title,
-    required this.isCompleted,
-  });
-
-  MilestoneModel copyWith({
-    String? id,
-    String? title,
-    bool? isCompleted,
-  }) {
-    return MilestoneModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      isCompleted: isCompleted ?? this.isCompleted,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'isCompleted': isCompleted,
-    };
-  }
-
-  factory MilestoneModel.fromMap(Map<String, dynamic> map) {
-    return MilestoneModel(
-      id: map['id'] as String? ?? '',
-      title: map['title'] as String? ?? '',
-      isCompleted: map['isCompleted'] as bool? ?? false,
-    );
-  }
-}
-
 class GoalModel {
   final String id;
   final String userId;
   final String title;
   final String description;
-  final DateTime targetDate;
+  final String category;
+  final double targetHours;
+  final double completedHours;
   final double progressPercentage;
-  final List<MilestoneModel> milestones;
+  final bool isCompleted;
   final String status;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const GoalModel({
     required this.id,
     required this.userId,
     required this.title,
     required this.description,
-    required this.targetDate,
+    required this.category,
+    required this.targetHours,
+    required this.completedHours,
     required this.progressPercentage,
-    required this.milestones,
+    required this.isCompleted,
     required this.status,
     required this.createdAt,
+    required this.updatedAt,
   });
 
   GoalModel copyWith({
@@ -68,22 +34,28 @@ class GoalModel {
     String? userId,
     String? title,
     String? description,
-    DateTime? targetDate,
+    String? category,
+    double? targetHours,
+    double? completedHours,
     double? progressPercentage,
-    List<MilestoneModel>? milestones,
+    bool? isCompleted,
     String? status,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return GoalModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       title: title ?? this.title,
       description: description ?? this.description,
-      targetDate: targetDate ?? this.targetDate,
+      category: category ?? this.category,
+      targetHours: targetHours ?? this.targetHours,
+      completedHours: completedHours ?? this.completedHours,
       progressPercentage: progressPercentage ?? this.progressPercentage,
-      milestones: milestones ?? this.milestones,
+      isCompleted: isCompleted ?? this.isCompleted,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -92,11 +64,14 @@ class GoalModel {
       'userId': userId,
       'title': title,
       'description': description,
-      'targetDate': targetDate.toIso8601String(),
+      'category': category,
+      'targetHours': targetHours,
+      'completedHours': completedHours,
       'progressPercentage': progressPercentage,
-      'milestones': milestones.map((m) => m.toMap()).toList(),
+      'isCompleted': isCompleted,
       'status': status,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
@@ -113,21 +88,29 @@ class GoalModel {
       }
     }
 
-    final rawMilestones = map['milestones'] as List? ?? const [];
-    final List<MilestoneModel> parsedMilestones = rawMilestones
-        .map((m) => MilestoneModel.fromMap(Map<String, dynamic>.from(m as Map)))
-        .toList();
-
     return GoalModel(
       id: docId,
       userId: map['userId'] as String? ?? '',
       title: map['title'] as String? ?? '',
       description: map['description'] as String? ?? '',
-      targetDate: parseDate(map['targetDate']),
+      category: map['category'] as String? ?? 'Custom',
+      targetHours: (map['targetHours'] as num?)?.toDouble() ?? 0.0,
+      completedHours: (map['completedHours'] as num?)?.toDouble() ?? 0.0,
       progressPercentage: (map['progressPercentage'] as num?)?.toDouble() ?? 0.0,
-      milestones: parsedMilestones,
+      isCompleted: map['isCompleted'] as bool? ?? false,
       status: map['status'] as String? ?? 'Active',
       createdAt: parseDate(map['createdAt']),
+      updatedAt: parseDate(map['updatedAt']),
     );
+  }
+}
+
+extension GoalListAnalytics on List<GoalModel> {
+  double get totalGoalHours => fold(0.0, (sum, goal) => sum + goal.targetHours);
+  double get completedGoalHours => fold(0.0, (sum, goal) => sum + goal.completedHours);
+  double get completionRate {
+    if (isEmpty) return 0.0;
+    final completedCount = where((goal) => goal.isCompleted).length;
+    return (completedCount / length) * 100.0;
   }
 }

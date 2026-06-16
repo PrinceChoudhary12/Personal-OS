@@ -6,4 +6,5 @@ abstract class StreakRepository {
   Future<StreakModel?> getStreakByUserId(String userId);
   Future<void> updateStreak(StreakModel streak);
   Future<void> initializeStreak(String userId);
+  Future<StreakModel> calculateStreakFromActivities(String userId);
 }
