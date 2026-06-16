@@ -16,6 +16,8 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../streaks/presentation/providers/streak_providers.dart';
 import '../../../analytics/presentation/providers/analytics_providers.dart';
+import '../../../ai_coach/presentation/providers/ai_coach_providers.dart';
+import '../../../scheduler/presentation/providers/schedule_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -36,6 +38,7 @@ class DashboardScreen extends ConsumerWidget {
         ref.read(streakRepositoryProvider).initializeStreak(user.uid);
         ref.read(streakRepositoryProvider).calculateStreakFromActivities(user.uid);
         ref.read(analyticsControllerProvider.notifier).syncAnalytics();
+        ref.read(aiCoachControllerProvider.notifier).syncInsights();
       });
     }
 
@@ -119,6 +122,10 @@ class DashboardScreen extends ConsumerWidget {
                               children: [
                                 _buildQuickActionsCard(context),
                                 const SizedBox(height: 16),
+                                _buildAICoachCard(context, ref),
+                                const SizedBox(height: 16),
+                                _buildUpcomingScheduleCard(context, ref),
+                                const SizedBox(height: 16),
                                 _buildGoalsProgressCard(context, goalsAsync),
                               ],
                             ),
@@ -130,6 +137,10 @@ class DashboardScreen extends ConsumerWidget {
                           _buildStatsSummaryRow(context, activitiesAsync, sessionsAsync, streak),
                           const SizedBox(height: 16),
                           _buildWeeklyProgressCard(context, sessionsAsync, profileAsync),
+                          const SizedBox(height: 16),
+                          _buildAICoachCard(context, ref),
+                          const SizedBox(height: 16),
+                          _buildUpcomingScheduleCard(context, ref),
                           const SizedBox(height: 16),
                           _buildQuickActionsCard(context),
                           const SizedBox(height: 16),
@@ -720,6 +731,336 @@ class DashboardScreen extends ConsumerWidget {
                 foregroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAICoachCard(BuildContext context, WidgetRef ref) {
+    final aiInsightAsync = ref.watch(aiInsightStreamProvider);
+
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Colors.indigoAccent,
+                  radius: 14,
+                  child: Icon(Icons.psychology, color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'AI Coach Insights',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                  onPressed: () => ref.read(aiCoachControllerProvider.notifier).syncInsights(),
+                  tooltip: 'Sync Coach Insights',
+                ),
+              ],
+            ),
+            const Divider(height: 12),
+            aiInsightAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(color: Colors.indigoAccent),
+                ),
+              ),
+              error: (err, _) => Text('Error loading AI insights: $err'),
+              data: (insight) {
+                if (insight == null) {
+                  return Column(
+                    children: [
+                      const Text(
+                        'Your AI Productivity Coach is ready to analyze your habits.',
+                        style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => ref.read(aiCoachControllerProvider.notifier).syncInsights(),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigoAccent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Generate Coach Report'),
+                      ),
+                    ],
+                  );
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Daily Advice
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.tips_and_updates_rounded, color: Colors.amber, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              insight.dailyAdvice,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Weekly Insight
+                    const Text(
+                      'WEEKLY INSIGHT',
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      insight.weeklyInsight,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Goal Suggestions
+                    const Text(
+                      'RECOMMENDATIONS',
+                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
+                    ),
+                    const SizedBox(height: 4),
+                    ...insight.goalSuggestions.take(2).map((s) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('• ', style: TextStyle(fontWeight: FontWeight.bold)),
+                              Expanded(
+                                child: Text(
+                                  s,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () => context.push('/ai-coach'),
+                      icon: const Icon(Icons.insights, size: 16),
+                      label: const Text('View Detailed AI Coach Report'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(40),
+                        side: const BorderSide(color: Colors.indigoAccent),
+                        foregroundColor: Colors.indigoAccent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingScheduleCard(BuildContext context, WidgetRef ref) {
+    final todayScheduleAsync = ref.watch(todayScheduleStreamProvider);
+
+    return Card(
+      elevation: 0,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const CircleAvatar(
+                  backgroundColor: Colors.teal,
+                  radius: 14,
+                  child: Icon(Icons.calendar_today_rounded, color: Colors.white, size: 16),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  "Today's Schedule",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                  onPressed: () => context.push('/schedule'),
+                  tooltip: 'Open Schedule Screen',
+                ),
+              ],
+            ),
+            const Divider(height: 12),
+            todayScheduleAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(color: Colors.teal),
+                ),
+              ),
+              error: (err, _) => Text('Error loading schedule: $err'),
+              data: (schedule) {
+                if (schedule == null || schedule.scheduledTasks.isEmpty) {
+                  return Column(
+                    children: [
+                      const Text(
+                        "No schedule generated for today.",
+                        style: TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.push('/schedule'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: const Text('Plan Your Day Now'),
+                      ),
+                    ],
+                  );
+                }
+
+                // Compute next task
+                final now = DateTime.now();
+                final uncompletedTasks = schedule.scheduledTasks
+                    .where((t) => !t.completed)
+                    .toList();
+                
+                final nextTask = uncompletedTasks.firstWhere(
+                  (t) => t.startTime.isAfter(now),
+                  orElse: () => uncompletedTasks.isNotEmpty ? uncompletedTasks.first : schedule.scheduledTasks.last,
+                );
+
+                // Compute next focus session (Deep Work or Coding)
+                final focusTasks = uncompletedTasks
+                    .where((t) => t.category == 'Deep Work' || t.category == 'Coding')
+                    .toList();
+                final nextFocus = focusTasks.isNotEmpty ? focusTasks.first : null;
+
+                // Daily Completion %
+                final completedCount = schedule.scheduledTasks.where((t) => t.completed).length;
+                final totalCount = schedule.scheduledTasks.length;
+                final double completionPercent = totalCount > 0 ? completedCount / totalCount : 0.0;
+
+                String formatTime(DateTime dt) {
+                  return "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Progress Bar
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          '$completedCount / $totalCount Tasks Done',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '${(completionPercent * 100).toStringAsFixed(0)}%',
+                          style: const TextStyle(color: Colors.teal, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: completionPercent,
+                        minHeight: 6,
+                        backgroundColor: Colors.teal.withValues(alpha: 0.1),
+                        color: Colors.teal,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Next Task Details
+                    Row(
+                      children: [
+                        const Icon(Icons.label_important_outline_rounded, color: Colors.indigo, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Next Task: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Expanded(
+                          child: Text(
+                            nextTask.title,
+                            style: const TextStyle(fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          formatTime(nextTask.startTime),
+                          style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Next Focus Session Details
+                    Row(
+                      children: [
+                        const Icon(Icons.timer_outlined, color: Colors.amber, size: 18),
+                        const SizedBox(width: 8),
+                        const Text('Next Focus: ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        Expanded(
+                          child: Text(
+                            nextFocus != null ? nextFocus.title : 'None scheduled',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: nextFocus != null ? Colors.black87 : Colors.grey,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (nextFocus != null)
+                          Text(
+                            formatTime(nextFocus.startTime),
+                            style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                          ),
+                      ],
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ),

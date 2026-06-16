@@ -18,6 +18,8 @@ import '../../features/profile/presentation/screens/edit_profile_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/activities/presentation/screens/activity_detail_screen.dart';
 import '../../features/activities/presentation/screens/create_edit_activity_screen.dart';
+import '../../features/ai_coach/presentation/screens/ai_coach_screen.dart';
+import '../../features/scheduler/presentation/screens/schedule_screen.dart';
 import 'navigation_scaffold.dart';
 import 'router_notifier.dart';
 
@@ -95,6 +97,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return CreateEditGoalScreen(editGoalId: id);
         },
+      ),
+      GoRoute(
+        path: '/ai-coach',
+        builder: (context, state) => const AICoachScreen(),
+      ),
+      GoRoute(
+        path: '/schedule',
+        builder: (context, state) => const ScheduleScreen(),
       ),
       // ── Protected Shell (bottom nav tabs) ─────────────────────────────────
       ShellRoute(

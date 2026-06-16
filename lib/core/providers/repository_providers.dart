@@ -15,6 +15,10 @@ import '../../features/streaks/data/repositories/firestore_streak_repository.dar
 import '../../features/streaks/domain/repositories/streak_repository.dart';
 import '../../features/analytics/data/repositories/firestore_analytics_repository.dart';
 import '../../features/analytics/domain/repositories/analytics_repository.dart';
+import '../../features/ai_coach/data/repositories/firestore_ai_coach_repository.dart';
+import '../../features/ai_coach/domain/repositories/ai_coach_repository.dart';
+import '../../features/scheduler/data/repositories/firestore_schedule_repository.dart';
+import '../../features/scheduler/domain/repositories/schedule_repository.dart';
 
 // ── Firestore Implementations ──────────────────────────────────────────────────
 
@@ -36,4 +40,12 @@ final streakRepositoryProvider = Provider<StreakRepository>((ref) {
 
 final analyticsRepositoryProvider = Provider<AnalyticsRepository>((ref) {
   return FirestoreAnalyticsRepository();
+});
+
+final aiCoachRepositoryProvider = Provider<AICoachRepository>((ref) {
+  return FirestoreAICoachRepository();
+});
+
+final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
+  return FirestoreScheduleRepository();
 });
