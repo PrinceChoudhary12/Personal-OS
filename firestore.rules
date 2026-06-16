@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper to verify user is accessing/writing their own data
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper to check resource ownership on read/write
+    function belongsToUser() {
+      return isAuthenticated() && 
+        (resource == null || resource.data.userId == request.auth.uid) &&
+        (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+
+    // Users Collection rules
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Analytics Collection rules
+    match /analytics/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Streaks Collection rules
+    match /streaks/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // AI Insights Collection rules
+    match /ai_insights/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Activities collection rules
+    match /activities/{activityId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Goals collection rules
+    match /goals/{goalId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Focus Sessions collection rules
+    match /focus_sessions/{sessionId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Schedules collection rules
+    match /schedules/{scheduleId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Reminders collection rules
+    match /reminders/{reminderId} {
+      allow read, write: if belongsToUser();
+    }
+  }
+}

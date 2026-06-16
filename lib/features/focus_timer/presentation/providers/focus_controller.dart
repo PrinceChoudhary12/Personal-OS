@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/models/focus_session_model.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
 
 class FocusState {
   final int initialDurationSeconds;
@@ -139,6 +140,13 @@ class FocusController extends StateNotifier<FocusState> {
       currentSessionId: sessionId,
     );
 
+    // Trigger focus started notification
+    _ref.read(notificationControllerProvider.notifier).addGeneralNotification(
+      'Focus Session Started ⏱️',
+      'Your focus session (${state.sessionType}) has started. Stay focused!',
+      'Focus',
+    );
+
     _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (state.durationLeftSeconds > 1) {
         state = state.copyWith(
@@ -241,6 +249,21 @@ class FocusController extends StateNotifier<FocusState> {
       isRunning: false,
       isPaused: false,
       isCompleted: true,
+    );
+
+    // Trigger completion and break alerts
+    final notifController = _ref.read(notificationControllerProvider.notifier);
+    notifController.addGeneralNotification(
+      'Focus Session Completed! 🏆',
+      'Excellent! You completed your ${state.sessionType} focus session.',
+      'Focus',
+    );
+
+    final breakMinutes = state.sessionType == 'Pomodoro' ? 5 : state.sessionType == 'Deep Work' ? 10 : 5;
+    notifController.addGeneralNotification(
+      'Time for a Break! ☕',
+      'Take a $breakMinutes minute break to stretch and rest your eyes.',
+      'Focus',
     );
 
     final user = _ref.read(firebaseAuthStateProvider).valueOrNull;

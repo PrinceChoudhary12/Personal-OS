@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/user_profile.dart';
 import '../providers/profile_providers.dart';
@@ -67,9 +68,25 @@ class EditProfileScreen extends ConsumerWidget {
           ),
         ),
         data: (profile) {
-          if (profile == null) {
-            return const Center(child: Text('No profile data found.'));
-          }
+          final currentUser = FirebaseAuth.instance.currentUser;
+          final now = DateTime.now();
+          final effectiveProfile = profile ?? UserProfile(
+            uid: currentUser?.uid ?? '',
+            email: currentUser?.email ?? '',
+            displayName: currentUser?.displayName ?? 'Personal OS User',
+            photoUrl: currentUser?.photoURL ?? '',
+            university: '',
+            course: '',
+            semester: 1,
+            skills: const [],
+            careerGoal: '',
+            bio: '',
+            dailyGoalHours: 0.0,
+            weeklyGoalHours: 0.0,
+            preferredStudyTime: 'Morning',
+            createdAt: now,
+            updatedAt: now,
+          );
 
           return Stack(
             children: [
@@ -79,7 +96,7 @@ class EditProfileScreen extends ConsumerWidget {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 600),
                     child: _EditProfileForm(
-                      profile: profile,
+                      profile: effectiveProfile,
                       isLoading: controllerState.isLoading,
                     ),
                   ),

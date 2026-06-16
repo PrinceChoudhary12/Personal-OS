@@ -132,7 +132,10 @@ class SettingsScreen extends ConsumerWidget {
                           color: Colors.amber,
                         ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => context.push('/profile'),
+                        onTap: () {
+                          debugPrint('PROFILE CLICKED');
+                        context.push('/profile');
+},
                       ),
                     ],
                   ),

@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../auth/presentation/providers/auth_providers.dart';
@@ -19,9 +20,11 @@ final userProfileProvider = StreamProvider<UserProfile?>((ref) {
   final authState = ref.watch(firebaseAuthStateProvider);
   final user = authState.valueOrNull;
   if (user == null) {
+    debugPrint('👤 [PROFILE PROVIDER] Firebase Auth user is null, returning empty stream.');
     return Stream.value(null);
   }
   final repository = ref.watch(profileRepositoryProvider);
+  debugPrint('👤 [PROFILE PROVIDER] Watching user profile stream for: ${user.uid}');
   return repository.watchProfile(user.uid);
 });
 

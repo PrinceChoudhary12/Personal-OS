@@ -20,6 +20,7 @@ import '../../features/activities/presentation/screens/activity_detail_screen.da
 import '../../features/activities/presentation/screens/create_edit_activity_screen.dart';
 import '../../features/ai_coach/presentation/screens/ai_coach_screen.dart';
 import '../../features/scheduler/presentation/screens/schedule_screen.dart';
+import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import 'navigation_scaffold.dart';
 import 'router_notifier.dart';
 
@@ -105,6 +106,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/schedule',
         builder: (context, state) => const ScheduleScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       // ── Protected Shell (bottom nav tabs) ─────────────────────────────────
       ShellRoute(

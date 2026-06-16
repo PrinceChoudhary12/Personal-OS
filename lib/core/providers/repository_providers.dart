@@ -19,6 +19,10 @@ import '../../features/ai_coach/data/repositories/firestore_ai_coach_repository.
 import '../../features/ai_coach/domain/repositories/ai_coach_repository.dart';
 import '../../features/scheduler/data/repositories/firestore_schedule_repository.dart';
 import '../../features/scheduler/domain/repositories/schedule_repository.dart';
+import '../../features/notifications/data/repositories/firestore_notification_repository.dart';
+import '../../features/notifications/domain/repositories/notification_repository.dart';
+import '../../features/notifications/data/repositories/firestore_reminder_repository.dart';
+import '../../features/notifications/domain/repositories/reminder_repository.dart';
 
 // ── Firestore Implementations ──────────────────────────────────────────────────
 
@@ -48,4 +52,12 @@ final aiCoachRepositoryProvider = Provider<AICoachRepository>((ref) {
 
 final scheduleRepositoryProvider = Provider<ScheduleRepository>((ref) {
   return FirestoreScheduleRepository();
+});
+
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  return FirestoreNotificationRepository();
+});
+
+final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
+  return FirestoreReminderRepository();
 });

@@ -7,6 +7,7 @@ import '../../../../core/providers/repository_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/models/activity_model.dart';
 import '../../domain/repositories/activity_repository.dart';
+import '../../../notifications/presentation/providers/notification_providers.dart';
 
 // --- Stream of Activities for current user ---
 final activitiesStreamProvider = StreamProvider<List<ActivityModel>>((ref) {
@@ -36,6 +37,13 @@ class ActivityController extends AsyncNotifier<void> {
       // Trigger streaks and analytics calculations
       await ref.read(streakRepositoryProvider).calculateStreakFromActivities(activity.userId);
       await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(activity.userId);
+      
+      // Trigger notifications
+      await ref.read(notificationControllerProvider.notifier).addGeneralNotification(
+        'Activity Logged 📝',
+        'You successfully logged a new activity: "${activity.title}".',
+        'Activity',
+      );
     });
   }
 
@@ -46,6 +54,13 @@ class ActivityController extends AsyncNotifier<void> {
       // Trigger streaks and analytics calculations
       await ref.read(streakRepositoryProvider).calculateStreakFromActivities(activity.userId);
       await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(activity.userId);
+      
+      // Trigger notifications
+      await ref.read(notificationControllerProvider.notifier).addGeneralNotification(
+        'Activity Updated 📝',
+        'Activity "${activity.title}" was updated.',
+        'Activity',
+      );
     });
   }
 
@@ -57,6 +72,13 @@ class ActivityController extends AsyncNotifier<void> {
       // Trigger streaks and analytics calculations
       await ref.read(streakRepositoryProvider).calculateStreakFromActivities(activity.userId);
       await ref.read(analyticsRepositoryProvider).calculateAndSaveAnalytics(activity.userId);
+      
+      // Trigger notifications
+      await ref.read(notificationControllerProvider.notifier).addGeneralNotification(
+        'Activity Deleted 🗑️',
+        'Activity "${activity.title}" was removed.',
+        'Activity',
+      );
     });
   }
 }

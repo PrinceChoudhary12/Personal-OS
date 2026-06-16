@@ -75,7 +75,47 @@ class UserProfileScreen extends ConsumerWidget {
         ),
         data: (profile) {
           if (profile == null) {
-            return const Center(child: Text('No profile found.'));
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.account_circle_outlined,
+                      size: 80,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Profile Found',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'It looks like you do not have a profile set up yet. Create one now to track your study goals!',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => context.push('/profile/edit'),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Create Profile'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           final nameInitials = profile.displayName.trim().isNotEmpty
