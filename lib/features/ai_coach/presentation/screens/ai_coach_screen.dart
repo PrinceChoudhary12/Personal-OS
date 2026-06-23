@@ -287,20 +287,26 @@ class _AICoachScreenState extends ConsumerState<AICoachScreen> with SingleTicker
                             labelColor: Colors.indigoAccent,
                             unselectedLabelColor: Colors.grey,
                             tabs: const [
-                              Tab(text: 'Daily Summary'),
-                              Tab(text: 'Weekly summary'),
-                              Tab(text: 'Monthly summary'),
+                              Tab(text: 'Daily AI Briefing'),
+                              Tab(text: 'Weekly AI Review'),
+                              Tab(text: 'Productivity Insights'),
                             ],
                           ),
                           Container(
                             padding: const EdgeInsets.all(20.0),
-                            height: 120,
+                            height: 160,
                             child: TabBarView(
                               controller: _summaryTabController,
                               children: [
-                                Text(insight.dailySummary, style: const TextStyle(fontSize: 13, height: 1.4)),
-                                Text(insight.weeklySummary, style: const TextStyle(fontSize: 13, height: 1.4)),
-                                Text(insight.monthlySummary, style: const TextStyle(fontSize: 13, height: 1.4)),
+                                SingleChildScrollView(
+                                  child: Text(insight.dailyBriefing, style: const TextStyle(fontSize: 13, height: 1.4)),
+                                ),
+                                SingleChildScrollView(
+                                  child: Text(insight.weeklyReview, style: const TextStyle(fontSize: 13, height: 1.4)),
+                                ),
+                                SingleChildScrollView(
+                                  child: Text(insight.productivityInsights, style: const TextStyle(fontSize: 13, height: 1.4)),
+                                ),
                               ],
                             ),
                           ),
@@ -346,20 +352,20 @@ class _AICoachScreenState extends ConsumerState<AICoachScreen> with SingleTicker
                         Expanded(
                           child: _buildListCard(
                             context,
-                            title: 'Focus Improvement',
+                            title: 'Focus Recommendations',
                             icon: Icons.track_changes_rounded,
                             iconColor: Colors.teal,
-                            items: insight.focusImprovementTips,
+                            items: insight.focusRecommendations,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: _buildListCard(
                             context,
-                            title: 'Time Management',
-                            icon: Icons.hourglass_top_rounded,
-                            iconColor: Colors.deepPurple,
-                            items: insight.timeManagementSuggestions,
+                            title: 'Streak Predictions',
+                            icon: Icons.offline_bolt_rounded,
+                            iconColor: Colors.amber,
+                            items: insight.streakPredictions,
                           ),
                         ),
                       ],

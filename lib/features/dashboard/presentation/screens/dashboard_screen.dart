@@ -18,8 +18,21 @@ import '../../../../core/providers/sync_providers.dart';
 import '../../../streaks/presentation/providers/streak_providers.dart';
 import '../../../analytics/presentation/providers/analytics_providers.dart';
 import '../../../ai_coach/presentation/providers/ai_coach_providers.dart';
-import '../../../scheduler/presentation/providers/schedule_providers.dart';
+import '../../../scheduler/presentation/providers/scheduler_providers.dart';
 import '../../../notifications/presentation/providers/notification_providers.dart';
+import '../../../gamification/presentation/providers/gamification_providers.dart';
+import '../../../gamification/domain/models/xp_model.dart';
+import '../../../achievements/presentation/providers/achievement_providers.dart';
+import '../../../achievements/domain/models/achievement_model.dart';
+import '../../../daily_challenges/presentation/providers/challenge_providers.dart';
+import '../../../daily_challenges/domain/models/challenge_model.dart';
+import '../../../brain_games/presentation/providers/brain_games_providers.dart';
+import '../../../brain_games/domain/models/game_model.dart';
+import '../../../habits/presentation/providers/habit_providers.dart';
+import '../../../student_hub/presentation/providers/student_providers.dart';
+import '../../../student_hub/domain/models/subject_model.dart';
+
+
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -31,7 +44,12 @@ class DashboardScreen extends ConsumerWidget {
     final sessionsAsync = ref.watch(focusSessionsStreamProvider);
     final goalsAsync = ref.watch(goalsStreamProvider);
     final streakAsync = ref.watch(streakStreamProvider);
+    final gamificationAsync = ref.watch(gamificationStreamProvider);
+    final achievementsAsync = ref.watch(achievementsStreamProvider);
+    final challengesAsync = ref.watch(dailyChallengesStreamProvider);
+    final brainGamesAsync = ref.watch(brainGamesStreamProvider);
     final unreadNotifCount = ref.watch(unreadCountProvider);
+
 
     final user = ref.read(firebaseAuthStateProvider).valueOrNull;
     if (user != null) {
@@ -129,7 +147,9 @@ class DashboardScreen extends ConsumerWidget {
                         letterSpacing: -1.0,
                       ),
                     ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                _buildXPProgressCard(context, gamificationAsync),
+                const SizedBox(height: 16),
 
                 // --- Grid Layout ---
                 isWide
@@ -144,6 +164,8 @@ class DashboardScreen extends ConsumerWidget {
                                 const SizedBox(height: 20),
                                 _buildWeeklyProgressCard(context, sessionsAsync, profileAsync),
                                 const SizedBox(height: 20),
+                                _buildDailyChallengesCard(context, challengesAsync),
+                                const SizedBox(height: 20),
                                 _buildRecentActivitiesCard(context, activitiesAsync),
                               ],
                             ),
@@ -155,11 +177,23 @@ class DashboardScreen extends ConsumerWidget {
                               children: [
                                 _buildQuickActionsCard(context),
                                 const SizedBox(height: 20),
+                                _buildAIDailyBriefingWidget(context, ref),
+                                const SizedBox(height: 20),
                                 _buildAICoachCard(context, ref),
+                                const SizedBox(height: 20),
+                                _buildHabitsOverviewCard(context, ref),
+                                const SizedBox(height: 20),
+                                _buildStudentHubOverviewCard(context, ref),
+                                const SizedBox(height: 20),
+                                _buildRecentRemindersCard(context, ref),
                                 const SizedBox(height: 20),
                                 _buildUpcomingScheduleCard(context, ref),
                                 const SizedBox(height: 20),
                                 _buildGoalsProgressCard(context, goalsAsync),
+                                const SizedBox(height: 20),
+                                _buildRecentAchievementsCard(context, achievementsAsync),
+                                const SizedBox(height: 20),
+                                _buildBrainScoreCard(context, brainGamesAsync),
                               ],
                             ),
                           ),
@@ -171,13 +205,27 @@ class DashboardScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                           _buildWeeklyProgressCard(context, sessionsAsync, profileAsync),
                           const SizedBox(height: 20),
+                          _buildAIDailyBriefingWidget(context, ref),
+                          const SizedBox(height: 20),
                           _buildAICoachCard(context, ref),
+                          const SizedBox(height: 20),
+                          _buildHabitsOverviewCard(context, ref),
+                          const SizedBox(height: 20),
+                          _buildStudentHubOverviewCard(context, ref),
+                          const SizedBox(height: 20),
+                          _buildRecentRemindersCard(context, ref),
                           const SizedBox(height: 20),
                           _buildUpcomingScheduleCard(context, ref),
                           const SizedBox(height: 20),
                           _buildQuickActionsCard(context),
                           const SizedBox(height: 20),
                           _buildGoalsProgressCard(context, goalsAsync),
+                          const SizedBox(height: 20),
+                          _buildRecentAchievementsCard(context, achievementsAsync),
+                          const SizedBox(height: 20),
+                          _buildDailyChallengesCard(context, challengesAsync),
+                          const SizedBox(height: 20),
+                          _buildBrainScoreCard(context, brainGamesAsync),
                           const SizedBox(height: 20),
                           _buildRecentActivitiesCard(context, activitiesAsync),
                         ],
@@ -814,6 +862,250 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildAIDailyBriefingWidget(BuildContext context, WidgetRef ref) {
+    final aiInsightAsync = ref.watch(aiInsightStreamProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.wb_sunny_rounded, color: Colors.amber, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Your Daily AI Briefing',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          aiInsightAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(color: Colors.amber),
+              ),
+            ),
+            error: (err, _) => Text('Error loading daily briefing: $err'),
+            data: (insight) {
+              if (insight == null) {
+                return const Text(
+                  'Daily briefing is preparing. Log a focus session or recalculate insights to generate your briefing.',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    insight.dailyBriefing,
+                    style: const TextStyle(fontSize: 13, height: 1.4, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  InkWell(
+                    onTap: () => context.push('/ai-coach'),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Open AI Coach 2.0',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigoAccent,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_rounded, size: 14, color: Colors.indigoAccent),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHabitsOverviewCard(BuildContext context, WidgetRef ref) {
+    final habitsAsync = ref.watch(habitsStreamProvider);
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.cached_rounded, color: AppColors.primary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Habits Today',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          habitsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(color: AppColors.primary),
+              ),
+            ),
+            error: (err, _) => Text('Error loading habits: $err'),
+            data: (habits) {
+              if (habits.isEmpty) {
+                return Column(
+                  children: [
+                    const Text(
+                      'No habits set up yet. Start tracking a new habit to build consistency!',
+                      style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      onPressed: () => context.push('/habits'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                      ),
+                      child: const Text('Create a Habit'),
+                    ),
+                  ],
+                );
+              }
+
+              // Show active habits
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ...habits.map((habit) {
+                    final completed = habit.completedDates.contains(todayStr);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              completed
+                                  ? Icons.check_circle_rounded
+                                  : Icons.radio_button_unchecked_rounded,
+                              color: completed ? Color(habit.color) : Colors.grey,
+                              size: 22,
+                            ),
+                            onPressed: () => ref
+                                .read(habitControllerProvider.notifier)
+                                .toggleHabitCompletion(habit.id, todayStr),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  habit.title,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: completed ? TextDecoration.lineThrough : null,
+                                    color: completed ? Colors.grey : null,
+                                  ),
+                                ),
+                                if (habit.description.isNotEmpty)
+                                  Text(
+                                    habit.description,
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (habit.currentStreak > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('🔥 ', style: TextStyle(fontSize: 10)),
+                                  Text(
+                                    '${habit.currentStreak}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.push('/habits'),
+                    icon: const Icon(Icons.keyboard_arrow_right_rounded, size: 16),
+                    label: const Text('Manage Habits & Analytics', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(40),
+                      side: const BorderSide(color: AppColors.primary),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAICoachCard(BuildContext context, WidgetRef ref) {
     final aiInsightAsync = ref.watch(aiInsightStreamProvider);
 
@@ -961,8 +1253,903 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildXPProgressCard(BuildContext context, AsyncValue<XpModel?> gamificationAsync) {
+    return gamificationAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (xpModel) {
+        if (xpModel == null) return const SizedBox.shrink();
+
+        final level = xpModel.level;
+        final totalXp = xpModel.totalXp;
+        final currentXp = xpModel.currentXp;
+        final nextLevelCumulativeXp = xpModel.nextLevelXp;
+        
+        final currentLevelBaseline = LevelCalculator.xpForLevel(level);
+        final levelRange = nextLevelCumulativeXp - currentLevelBaseline;
+        
+        final double progress = levelRange > 0 
+            ? (currentXp / levelRange).clamp(0.0, 1.0) 
+            : 0.0;
+            
+        final xpNeeded = levelRange - currentXp;
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.workspace_premium_rounded,
+                            color: AppColors.primary,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Level $level Explorer',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            Text(
+                              '$totalXp Total XP',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context).hintColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '$currentXp / $levelRange XP',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        Text(
+                          '$xpNeeded XP to Level ${level + 1}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Theme.of(context).hintColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: SizedBox(
+                    height: 8,
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentAchievementsCard(
+    BuildContext context,
+    AsyncValue<List<AchievementModel>> achievementsAsync,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.emoji_events_rounded,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Recent Badge',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.go('/achievements'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'View All',
+                    style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            achievementsAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (err, _) => Text(
+                'Failed to load achievements',
+                style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+              ),
+              data: (list) {
+                final unlocked = list.where((a) => a.unlocked).toList();
+                if (unlocked.isEmpty) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No badges unlocked yet',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Complete goals, tasks, or focus sessions to earn your first badge!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.hintColor,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                // Sort by unlockedAt descending
+                unlocked.sort((a, b) {
+                  if (a.unlockedAt == null && b.unlockedAt == null) return 0;
+                  if (a.unlockedAt == null) return 1;
+                  if (b.unlockedAt == null) return -1;
+                  return b.unlockedAt!.compareTo(a.unlockedAt!);
+                });
+
+                final recent = unlocked.first;
+
+                return InkWell(
+                  onTap: () => context.go('/achievements'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              recent.icon,
+                              style: const TextStyle(fontSize: 22),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                recent.title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                recent.description,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.hintColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDailyChallengesCard(
+    BuildContext context,
+    AsyncValue<List<ChallengeModel>> challengesAsync,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.bolt_rounded,
+                        color: AppColors.primary,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      "Today's Challenges",
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.go('/daily-challenges'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'View All',
+                    style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            challengesAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (err, _) => Text(
+                'Failed to load challenges',
+                style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+              ),
+              data: (list) {
+                if (list.isEmpty) {
+                  return Text(
+                    'No challenges available today.',
+                    style: TextStyle(fontSize: 12, color: theme.hintColor),
+                  );
+                }
+
+                final completedCount = list.where((c) => c.completed).length;
+                final progress = list.isNotEmpty ? completedCount / list.length : 0.0;
+
+                return Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...list.map((challenge) {
+                      final isCompleted = challenge.completed;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isCompleted ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                              color: isCompleted ? AppColors.primary : theme.hintColor,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                challenge.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  decoration: isCompleted ? TextDecoration.lineThrough : null,
+                                  color: isCompleted ? theme.hintColor : theme.textTheme.bodyMedium?.color,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '+${challenge.xpReward} XP',
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrainScoreCard(
+    BuildContext context,
+    AsyncValue<List<GameModel>> brainGamesAsync,
+  ) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.psychology_rounded,
+                        color: Colors.purpleAccent,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      "Brain Score",
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.go('/brain-games'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Train Brain',
+                    style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            brainGamesAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (err, _) => Text(
+                'Failed to load brain score',
+                style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+              ),
+              data: (list) {
+                final totalPlays = list.fold<int>(0, (sum, g) => sum + g.totalPlays);
+                if (totalPlays == 0) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No brain training recorded',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Play cognitive games like Reaction speed or Mental math to track your score!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.hintColor,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                final memoryRec = list.where((g) => g.gameType == 'memory_matrix').firstOrNull;
+                final mathRec = list.where((g) => g.gameType == 'mental_math').firstOrNull;
+                final reactionRec = list.where((g) => g.gameType == 'reaction_speed').firstOrNull;
+
+                String memoryBest = memoryRec != null ? '${memoryRec.bestScore.toInt()} pts' : 'N/A';
+                String mathBest = mathRec != null ? '${mathRec.bestScore.toInt()} pts' : 'N/A';
+                String reactionBest = reactionRec != null ? '${reactionRec.bestScore.toInt()} ms' : 'N/A';
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Total plays: $totalPlays sessions',
+                          style: TextStyle(fontSize: 13, color: theme.hintColor, fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Active Training',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purpleAccent),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStatRow('Memory Grid', memoryBest, Icons.grid_on_rounded, Colors.blueAccent),
+                    const SizedBox(height: 8),
+                    _buildStatRow('Reaction Speed', reactionBest, Icons.flash_on_rounded, Colors.amberAccent),
+                    const SizedBox(height: 8),
+                    _buildStatRow('Mental Math', mathBest, Icons.calculate_rounded, Colors.redAccent),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentRemindersCard(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final remindersAsync = ref.watch(notificationsStreamProvider);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.alarm_rounded,
+                        color: Colors.redAccent,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      "Upcoming Reminders",
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton(
+                  onPressed: () => context.push('/notifications'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'View All',
+                    style: TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            remindersAsync.when(
+              loading: () => const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16.0),
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              error: (err, _) => Text(
+                'Failed to load reminders',
+                style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
+              ),
+              data: (list) {
+                final pending = list.where((r) => !r.completed).toList();
+                if (pending.isEmpty) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'All clear! No pending reminders.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton(
+                        onPressed: () => context.push('/notifications'),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(50, 24),
+                        ),
+                        child: const Text(
+                          '+ Set Reminder',
+                          style: TextStyle(fontSize: 12, color: AppColors.primary),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                final recent = pending.take(3).toList();
+
+                return Column(
+                  children: recent.map((item) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: item.completed,
+                            activeColor: AppColors.secondary,
+                            onChanged: (val) {
+                              if (val != null) {
+                                ref.read(notificationControllerProvider.notifier).toggleCompletion(item, val);
+                              }
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (item.description.isNotEmpty)
+                                  Text(
+                                    item.description,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.hintColor,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentHubOverviewCard(BuildContext context, WidgetRef ref) {
+    final subjectsAsync = ref.watch(subjectsStreamProvider);
+    final attendanceAsync = ref.watch(attendanceStreamProvider);
+    final assignmentsAsync = ref.watch(assignmentsStreamProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.school_outlined, color: AppColors.secondary, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Student Hub',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                onPressed: () => context.push('/student-hub'),
+                style: IconButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(28, 28),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          subjectsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: AppColors.secondary),
+              ),
+            ),
+            error: (err, _) => Text('Error loading subjects: $err'),
+            data: (subjects) {
+              final attendanceLogs = attendanceAsync.valueOrNull ?? [];
+              final assignments = assignmentsAsync.valueOrNull ?? [];
+
+              // CGPA calculation
+              double totalCredits = 0.0;
+              double totalPoints = 0.0;
+              for (final s in subjects) {
+                if (s.isCompleted && s.gradePoint != null) {
+                  totalCredits += s.credits;
+                  totalPoints += (s.credits * s.gradePoint!);
+                }
+              }
+              final cgpa = totalCredits > 0 ? (totalPoints / totalCredits) : 0.0;
+
+              // Attendance Warnings
+              final lowAttendanceSubjects = <SubjectModel>[];
+              for (final s in subjects) {
+                final logs = attendanceLogs.where((l) => l.subjectId == s.id).toList();
+                if (logs.isNotEmpty) {
+                  final presents = logs.where((l) => l.status == 'present').length;
+                  final absents = logs.where((l) => l.status == 'absent').length;
+                  final total = presents + absents;
+                  if (total > 0) {
+                    final rate = (presents / total) * 100.0;
+                    if (rate < 75.0) {
+                      lowAttendanceSubjects.add(s);
+                    }
+                  }
+                }
+              }
+
+              // Assignments info
+              final pendingCount = assignments.where((a) => a.status == 'Pending').length;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'CURRENT CGPA',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            cgpa > 0 ? cgpa.toStringAsFixed(2) : 'N/A',
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'PENDING WORK',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$pendingCount Assignments',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (lowAttendanceSubjects.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Low attendance in ${lowAttendanceSubjects.length} subjects!',
+                              style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => context.push('/student-hub'),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      child: const Text('Open Student Hub', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildUpcomingScheduleCard(BuildContext context, WidgetRef ref) {
-    final todayScheduleAsync = ref.watch(todayScheduleStreamProvider);
+    final schedulesAsync = ref.watch(schedulesStreamProvider);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -994,13 +2181,13 @@ class DashboardScreen extends ConsumerWidget {
               const Spacer(),
               IconButton(
                 icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                onPressed: () => context.push('/schedule'),
-                tooltip: 'Open Schedule Screen',
+                onPressed: () => context.push('/scheduler'),
+                tooltip: 'Open Scheduler Screen',
               ),
             ],
           ),
           const Divider(height: 20),
-          todayScheduleAsync.when(
+          schedulesAsync.when(
             loading: () => const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
@@ -1008,8 +2195,17 @@ class DashboardScreen extends ConsumerWidget {
               ),
             ),
             error: (err, _) => Text('Error loading schedule: $err'),
-            data: (schedule) {
-              if (schedule == null || schedule.scheduledTasks.isEmpty) {
+            data: (allSchedules) {
+              final now = DateTime.now();
+              final startOfToday = DateTime(now.year, now.month, now.day);
+              final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+              final todayTasks = allSchedules
+                  .where((t) => t.startTime.isAfter(startOfToday.subtract(const Duration(seconds: 1))) &&
+                                t.startTime.isBefore(endOfToday.add(const Duration(seconds: 1))))
+                  .toList();
+
+              if (todayTasks.isEmpty) {
                 return Column(
                   children: [
                     const Text(
@@ -1019,7 +2215,7 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: () => context.push('/schedule'),
+                      onPressed: () => context.push('/scheduler'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
                         foregroundColor: Colors.white,
@@ -1032,14 +2228,15 @@ class DashboardScreen extends ConsumerWidget {
                 );
               }
 
-              final now = DateTime.now();
-              final uncompletedTasks = schedule.scheduledTasks
+              todayTasks.sort((a, b) => a.startTime.compareTo(b.startTime));
+
+              final uncompletedTasks = todayTasks
                   .where((t) => !t.completed)
                   .toList();
-              
+
               final nextTask = uncompletedTasks.firstWhere(
                 (t) => t.startTime.isAfter(now),
-                orElse: () => uncompletedTasks.isNotEmpty ? uncompletedTasks.first : schedule.scheduledTasks.last,
+                orElse: () => uncompletedTasks.isNotEmpty ? uncompletedTasks.first : todayTasks.last,
               );
 
               final focusTasks = uncompletedTasks
@@ -1047,8 +2244,8 @@ class DashboardScreen extends ConsumerWidget {
                   .toList();
               final nextFocus = focusTasks.isNotEmpty ? focusTasks.first : null;
 
-              final completedCount = schedule.scheduledTasks.where((t) => t.completed).length;
-              final totalCount = schedule.scheduledTasks.length;
+              final completedCount = todayTasks.where((t) => t.completed).length;
+              final totalCount = todayTasks.length;
               final double completionPercent = totalCount > 0 ? completedCount / totalCount : 0.0;
 
               String formatTime(DateTime dt) {
@@ -1154,6 +2351,25 @@ class DashboardScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatRow(String title, String val, IconData icon, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: color.withValues(alpha: 0.8)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ),
+        Text(
+          val,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

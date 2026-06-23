@@ -3,90 +3,67 @@
 class AIInsightModel {
   final String id;
   final String userId;
+  final Map<String, dynamic> summary; // dailyBriefing, weeklyReview, productivityInsights
+  final Map<String, dynamic> recommendations; // focus, goals, streaks
   final int productivityScore; // 0-100
-  final String dailySummary;
-  final String weeklySummary;
-  final String monthlySummary;
-  final List<String> goalRecommendations;
-  final List<String> focusImprovementTips;
-  final List<String> timeManagementSuggestions;
-  final List<String> productivityWarnings;
-  final String dailyAdvice;
-  final String weeklyInsight;
-  final List<String> goalSuggestions;
-  final Map<String, dynamic> trendComparison; // compares this week vs last week, this month vs last month
-  final DateTime createdAt;
+  final DateTime generatedAt;
 
   const AIInsightModel({
     required this.id,
     required this.userId,
+    required this.summary,
+    required this.recommendations,
     required this.productivityScore,
-    required this.dailySummary,
-    required this.weeklySummary,
-    required this.monthlySummary,
-    required this.goalRecommendations,
-    required this.focusImprovementTips,
-    required this.timeManagementSuggestions,
-    required this.productivityWarnings,
-    required this.dailyAdvice,
-    required this.weeklyInsight,
-    required this.goalSuggestions,
-    required this.trendComparison,
-    required this.createdAt,
+    required this.generatedAt,
   });
+
+  // Getters for specific AI Coach 2.0 components
+  String get dailyBriefing => summary['dailyBriefing'] as String? ?? '';
+  String get weeklyReview => summary['weeklyReview'] as String? ?? '';
+  String get productivityInsights => summary['productivityInsights'] as String? ?? '';
+
+  List<String> get focusRecommendations => List<String>.from(recommendations['focus'] ?? const []);
+  List<String> get goalRecommendations => List<String>.from(recommendations['goals'] ?? const []);
+  List<String> get streakPredictions => List<String>.from(recommendations['streaks'] ?? const []);
+
+  // Backwards compatibility getters for existing screen references/dashboard consumption
+  String get dailyAdvice => dailyBriefing;
+  String get weeklyInsight => weeklyReview;
+  List<String> get goalSuggestions => goalRecommendations;
+  List<String> get focusImprovementTips => focusRecommendations;
+  List<String> get timeManagementSuggestions => focusRecommendations;
+  List<String> get productivityWarnings => streakPredictions;
+  String get dailySummary => dailyBriefing;
+  String get weeklySummary => weeklyReview;
+  String get monthlySummary => productivityInsights;
+  Map<String, dynamic> get trendComparison => const {};
+  DateTime get createdAt => generatedAt;
 
   AIInsightModel copyWith({
     String? id,
     String? userId,
+    Map<String, dynamic>? summary,
+    Map<String, dynamic>? recommendations,
     int? productivityScore,
-    String? dailySummary,
-    String? weeklySummary,
-    String? monthlySummary,
-    List<String>? goalRecommendations,
-    List<String>? focusImprovementTips,
-    List<String>? timeManagementSuggestions,
-    List<String>? productivityWarnings,
-    String? dailyAdvice,
-    String? weeklyInsight,
-    List<String>? goalSuggestions,
-    Map<String, dynamic>? trendComparison,
-    DateTime? createdAt,
+    DateTime? generatedAt,
   }) {
     return AIInsightModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
+      summary: summary ?? this.summary,
+      recommendations: recommendations ?? this.recommendations,
       productivityScore: productivityScore ?? this.productivityScore,
-      dailySummary: dailySummary ?? this.dailySummary,
-      weeklySummary: weeklySummary ?? this.weeklySummary,
-      monthlySummary: monthlySummary ?? this.monthlySummary,
-      goalRecommendations: goalRecommendations ?? this.goalRecommendations,
-      focusImprovementTips: focusImprovementTips ?? this.focusImprovementTips,
-      timeManagementSuggestions: timeManagementSuggestions ?? this.timeManagementSuggestions,
-      productivityWarnings: productivityWarnings ?? this.productivityWarnings,
-      dailyAdvice: dailyAdvice ?? this.dailyAdvice,
-      weeklyInsight: weeklyInsight ?? this.weeklyInsight,
-      goalSuggestions: goalSuggestions ?? this.goalSuggestions,
-      trendComparison: trendComparison ?? this.trendComparison,
-      createdAt: createdAt ?? this.createdAt,
+      generatedAt: generatedAt ?? this.generatedAt,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
+      'summary': summary,
+      'recommendations': recommendations,
       'productivityScore': productivityScore,
-      'dailySummary': dailySummary,
-      'weeklySummary': weeklySummary,
-      'monthlySummary': monthlySummary,
-      'goalRecommendations': goalRecommendations,
-      'focusImprovementTips': focusImprovementTips,
-      'timeManagementSuggestions': timeManagementSuggestions,
-      'productivityWarnings': productivityWarnings,
-      'dailyAdvice': dailyAdvice,
-      'weeklyInsight': weeklyInsight,
-      'goalSuggestions': goalSuggestions,
-      'trendComparison': trendComparison,
-      'createdAt': createdAt.toIso8601String(),
+      'generatedAt': generatedAt.toIso8601String(),
     };
   }
 
@@ -111,22 +88,37 @@ class AIInsightModel {
       return const [];
     }
 
+    // Nested summary map extraction with fallback
+    Map<String, dynamic> extractedSummary;
+    if (map['summary'] is Map) {
+      extractedSummary = Map<String, dynamic>.from(map['summary'] as Map);
+    } else {
+      extractedSummary = {
+        'dailyBriefing': map['dailyAdvice'] as String? ?? map['dailySummary'] as String? ?? '',
+        'weeklyReview': map['weeklyInsight'] as String? ?? map['weeklySummary'] as String? ?? '',
+        'productivityInsights': map['monthlySummary'] as String? ?? '',
+      };
+    }
+
+    // Nested recommendations map extraction with fallback
+    Map<String, dynamic> extractedRecommendations;
+    if (map['recommendations'] is Map) {
+      extractedRecommendations = Map<String, dynamic>.from(map['recommendations'] as Map);
+    } else {
+      extractedRecommendations = {
+        'focus': parseStringList(map['focusImprovementTips'] ?? map['timeManagementSuggestions']),
+        'goals': parseStringList(map['goalRecommendations'] ?? map['goalSuggestions']),
+        'streaks': parseStringList(map['productivityWarnings']),
+      };
+    }
+
     return AIInsightModel(
       id: docId,
       userId: map['userId'] as String? ?? '',
+      summary: extractedSummary,
+      recommendations: extractedRecommendations,
       productivityScore: map['productivityScore'] as int? ?? 0,
-      dailySummary: map['dailySummary'] as String? ?? '',
-      weeklySummary: map['weeklySummary'] as String? ?? '',
-      monthlySummary: map['monthlySummary'] as String? ?? '',
-      goalRecommendations: parseStringList(map['goalRecommendations']),
-      focusImprovementTips: parseStringList(map['focusImprovementTips']),
-      timeManagementSuggestions: parseStringList(map['timeManagementSuggestions']),
-      productivityWarnings: parseStringList(map['productivityWarnings']),
-      dailyAdvice: map['dailyAdvice'] as String? ?? '',
-      weeklyInsight: map['weeklyInsight'] as String? ?? '',
-      goalSuggestions: parseStringList(map['goalSuggestions']),
-      trendComparison: Map<String, dynamic>.from(map['trendComparison'] ?? const {}),
-      createdAt: parseDate(map['createdAt']),
+      generatedAt: parseDate(map['generatedAt'] ?? map['createdAt']),
     );
   }
 }

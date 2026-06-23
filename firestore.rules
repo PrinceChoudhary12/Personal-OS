@@ -21,6 +21,19 @@ service cloud.firestore {
     // Users Collection rules
     match /users/{userId} {
       allow read, write: if isOwner(userId);
+
+      match /achievements/{achievementId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /daily_challenges/{challengeId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Gamification Collection rules
+    match /gamification/{userId} {
+      allow read, write: if isOwner(userId);
     }
 
     // Analytics Collection rules
@@ -36,6 +49,11 @@ service cloud.firestore {
     // AI Insights Collection rules
     match /ai_insights/{userId} {
       allow read, write: if isOwner(userId);
+    }
+
+    // Brain Games Collection rules
+    match /brain_games/{scoreId} {
+      allow read, write: if belongsToUser();
     }
 
     // Activities collection rules
@@ -67,5 +85,31 @@ service cloud.firestore {
     match /reminders/{reminderId} {
       allow read, write: if belongsToUser();
     }
+
+    // Habits collection rules
+    match /habits/{habitId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Subjects collection rules
+    match /subjects/{subjectId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Attendance collection rules
+    match /attendance/{attendanceId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Assignments collection rules
+    match /assignments/{assignmentId} {
+      allow read, write: if belongsToUser();
+    }
+
+    // Placement progress collection rules
+    match /placement_progress/{placementId} {
+      allow read, write: if belongsToUser();
+    }
   }
 }
+

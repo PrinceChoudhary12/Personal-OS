@@ -3,22 +3,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers/repository_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
-import '../../domain/models/notification_model.dart';
+import '../../domain/models/reminder_model.dart';
 import '../../domain/repositories/notification_repository.dart';
 
-final notificationsStreamProvider = StreamProvider<List<NotificationModel>>((ref) {
+final notificationsStreamProvider = StreamProvider<List<ReminderModel>>((ref) {
   final authState = ref.watch(firebaseAuthStateProvider);
   final user = authState.valueOrNull;
   if (user == null) {
     return Stream.value(const []);
   }
+
   final repo = ref.watch(notificationRepositoryProvider);
+  
+  // Background trigger of smart warnings sync
+  repo.syncSystemReminders(user.uid).catchError((_) {});
+  
   return repo.streamNotifications(user.uid);
 });
 
 final unreadCountProvider = Provider<int>((ref) {
   final notificationsAsync = ref.watch(notificationsStreamProvider);
-  return notificationsAsync.valueOrNull?.where((n) => !n.isRead).length ?? 0;
+  return notificationsAsync.valueOrNull?.where((r) => !r.completed).length ?? 0;
 });
 
 class NotificationController extends StateNotifier<AsyncValue<void>> {
@@ -28,64 +33,77 @@ class NotificationController extends StateNotifier<AsyncValue<void>> {
 
   NotificationRepository get _repo => _ref.read(notificationRepositoryProvider);
 
-  Future<void> syncNotifications() async {
-    final user = _ref.read(firebaseAuthStateProvider).valueOrNull;
-    if (user == null) return;
-
+  Future<void> addReminder(ReminderModel reminder) async {
     state = const AsyncValue.loading();
     try {
-      await _repo.syncSystemNotifications(user.uid);
+      await _repo.createNotification(reminder);
       state = const AsyncValue.data(null);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
   }
 
-  Future<void> markAsRead(String notificationId) async {
+  Future<void> editReminder(ReminderModel reminder) async {
+    state = const AsyncValue.loading();
     try {
-      await _repo.markAsRead(notificationId);
+      await _repo.updateNotification(reminder);
+      state = const AsyncValue.data(null);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
   }
 
-  Future<void> markAllAsRead() async {
+  Future<void> deleteReminder(String id) async {
+    state = const AsyncValue.loading();
+    try {
+      await _repo.deleteNotification(id);
+      state = const AsyncValue.data(null);
+    } catch (err, stack) {
+      state = AsyncValue.error(err, stack);
+    }
+  }
+
+  Future<void> toggleCompletion(ReminderModel reminder, bool completed) async {
+    final updated = reminder.copyWith(completed: completed);
+    await editReminder(updated);
+  }
+
+  Future<void> syncReminders() async {
     final user = _ref.read(firebaseAuthStateProvider).valueOrNull;
     if (user == null) return;
 
+    state = const AsyncValue.loading();
     try {
-      await _repo.markAllAsRead(user.uid);
+      await _repo.syncSystemReminders(user.uid);
+      state = const AsyncValue.data(null);
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
   }
 
-  Future<void> deleteNotification(String notificationId) async {
-    try {
-      await _repo.deleteNotification(notificationId);
-    } catch (err, stack) {
-      state = AsyncValue.error(err, stack);
-    }
-  }
-
-  Future<void> addGeneralNotification(String title, String message, String type) async {
+  Future<void> addGeneralNotification(
+    String title,
+    String message,
+    String type,
+  ) async {
     final user = _ref.read(firebaseAuthStateProvider).valueOrNull;
     if (user == null) return;
 
-    try {
-      final notif = NotificationModel(
-        id: '',
-        userId: user.uid,
-        title: title,
-        message: message,
-        type: type,
-        isRead: false,
-        createdAt: DateTime.now(),
-      );
-      await _repo.createNotification(notif);
-    } catch (err, stack) {
-      state = AsyncValue.error(err, stack);
-    }
+    final reminder = ReminderModel(
+      id: '',
+      userId: user.uid,
+      title: title,
+      description: message,
+      reminderTime: DateTime.now(),
+      type: type,
+      completed: false,
+      createdAt: DateTime.now(),
+    );
+    await addReminder(reminder);
+  }
+
+  Future<void> syncNotifications() async {
+    await syncReminders();
   }
 }
 

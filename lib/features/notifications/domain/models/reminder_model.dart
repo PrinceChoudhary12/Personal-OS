@@ -5,10 +5,9 @@ class ReminderModel {
   final String userId;
   final String title;
   final String description;
-  final String type; // 'Goal', 'Focus', 'Activity', 'AI', 'General'
-  final DateTime triggerTime;
-  final String repeatType; // 'None', 'Daily', 'Weekly'
-  final bool isEnabled;
+  final DateTime reminderTime;
+  final String type; // 'Goal', 'Streak', 'Focus', 'General', 'AI'
+  final bool completed;
   final DateTime createdAt;
 
   const ReminderModel({
@@ -16,10 +15,9 @@ class ReminderModel {
     required this.userId,
     required this.title,
     required this.description,
+    required this.reminderTime,
     required this.type,
-    required this.triggerTime,
-    required this.repeatType,
-    required this.isEnabled,
+    required this.completed,
     required this.createdAt,
   });
 
@@ -28,10 +26,9 @@ class ReminderModel {
     String? userId,
     String? title,
     String? description,
+    DateTime? reminderTime,
     String? type,
-    DateTime? triggerTime,
-    String? repeatType,
-    bool? isEnabled,
+    bool? completed,
     DateTime? createdAt,
   }) {
     return ReminderModel(
@@ -39,23 +36,22 @@ class ReminderModel {
       userId: userId ?? this.userId,
       title: title ?? this.title,
       description: description ?? this.description,
+      reminderTime: reminderTime ?? this.reminderTime,
       type: type ?? this.type,
-      triggerTime: triggerTime ?? this.triggerTime,
-      repeatType: repeatType ?? this.repeatType,
-      isEnabled: isEnabled ?? this.isEnabled,
+      completed: completed ?? this.completed,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'userId': userId,
       'title': title,
       'description': description,
+      'reminderTime': reminderTime.toIso8601String(),
       'type': type,
-      'triggerTime': triggerTime.toIso8601String(),
-      'repeatType': repeatType,
-      'isEnabled': isEnabled,
+      'completed': completed,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -78,10 +74,9 @@ class ReminderModel {
       userId: map['userId'] as String? ?? '',
       title: map['title'] as String? ?? '',
       description: map['description'] as String? ?? '',
+      reminderTime: parseDate(map['reminderTime']),
       type: map['type'] as String? ?? 'General',
-      triggerTime: parseDate(map['triggerTime']),
-      repeatType: map['repeatType'] as String? ?? 'None',
-      isEnabled: map['isEnabled'] as bool? ?? true,
+      completed: map['completed'] as bool? ?? false,
       createdAt: parseDate(map['createdAt']),
     );
   }

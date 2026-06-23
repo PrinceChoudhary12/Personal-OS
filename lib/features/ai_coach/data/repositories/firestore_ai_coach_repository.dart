@@ -7,6 +7,13 @@ import '../../../activities/domain/models/activity_model.dart';
 import '../../../focus_timer/domain/models/focus_session_model.dart';
 import '../../../goals/domain/models/goal_model.dart';
 import '../../../streaks/domain/models/streak_model.dart';
+import '../../../brain_games/domain/models/game_model.dart';
+import '../../../achievements/domain/models/achievement_model.dart';
+import '../../../student_hub/domain/models/subject_model.dart';
+import '../../../student_hub/domain/models/attendance_model.dart';
+import '../../../student_hub/domain/models/assignment_model.dart';
+import '../../../student_hub/domain/models/placement_model.dart';
+
 
 class FirestoreAICoachRepository implements AICoachRepository {
   final FirebaseFirestore _firestore;
@@ -76,93 +83,138 @@ class FirestoreAICoachRepository implements AICoachRepository {
           .map((doc) => FocusSessionModel.fromMap(doc.data(), doc.id))
           .toList();
 
+      // 5. Fetch achievements
+      List<AchievementModel> achievements = [];
+      try {
+        final achievementsSnapshot = await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('achievements')
+            .get();
+        achievements = achievementsSnapshot.docs
+            .map((doc) => AchievementModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (_) {}
+
+      // 6. Fetch brain games
+      List<GameModel> brainGames = [];
+      try {
+        final brainGamesSnapshot = await _firestore
+            .collection('brain_games')
+            .where('userId', isEqualTo: userId)
+            .get();
+        brainGames = brainGamesSnapshot.docs
+            .map((doc) => GameModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (_) {}
+
+      // 7. Fetch student data
+      List<SubjectModel> subjects = [];
+      List<AttendanceModel> attendanceLogs = [];
+      List<AssignmentModel> assignments = [];
+      List<PlacementModel> placements = [];
+      try {
+        final subjectsSnapshot = await _firestore
+            .collection('subjects')
+            .where('userId', isEqualTo: userId)
+            .get();
+        subjects = subjectsSnapshot.docs
+            .map((doc) => SubjectModel.fromMap(doc.data(), doc.id))
+            .toList();
+
+        final attendanceSnapshot = await _firestore
+            .collection('attendance')
+            .where('userId', isEqualTo: userId)
+            .get();
+        attendanceLogs = attendanceSnapshot.docs
+            .map((doc) => AttendanceModel.fromMap(doc.data(), doc.id))
+            .toList();
+
+        final assignmentsSnapshot = await _firestore
+            .collection('assignments')
+            .where('userId', isEqualTo: userId)
+            .get();
+        assignments = assignmentsSnapshot.docs
+            .map((doc) => AssignmentModel.fromMap(doc.data(), doc.id))
+            .toList();
+
+        final placementsSnapshot = await _firestore
+            .collection('placement_progress')
+            .where('userId', isEqualTo: userId)
+            .get();
+        placements = placementsSnapshot.docs
+            .map((doc) => PlacementModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (_) {}
+
       // --- Calculations & Formulas ---
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day);
       final weekAgo = now.subtract(const Duration(days: 7));
-      final monthAgo = now.subtract(const Duration(days: 30));
       final twoWeeksAgo = now.subtract(const Duration(days: 14));
-      final twoMonthsAgo = now.subtract(const Duration(days: 60));
 
-      // 4.1 Today's focus sessions count
+      // Focus metrics
       final todaySessions = sessions.where((s) => s.startTime.isAfter(todayStart)).toList();
       final todaySessionsCount = todaySessions.length;
       final todayFocusMinutes = todaySessions.fold<int>(0, (total, s) => total + s.durationMinutes);
 
-      // 4.2 Weekly focus minutes
       final thisWeekSessions = sessions.where((s) => s.startTime.isAfter(weekAgo)).toList();
       final thisWeekFocusMinutes = thisWeekSessions.fold<int>(0, (total, s) => total + s.durationMinutes);
 
-      final lastWeekSessions = sessions.where((s) => s.startTime.isAfter(twoWeeksAgo) && s.startTime.isBefore(weekAgo)).toList();
+      final lastWeekSessions = sessions
+          .where((s) => s.startTime.isAfter(twoWeeksAgo) && s.startTime.isBefore(weekAgo))
+          .toList();
       final lastWeekFocusMinutes = lastWeekSessions.fold<int>(0, (total, s) => total + s.durationMinutes);
 
-      // 4.3 Monthly focus minutes
-      final thisMonthSessions = sessions.where((s) => s.startTime.isAfter(monthAgo)).toList();
-      final thisMonthFocusMinutes = thisMonthSessions.fold<int>(0, (total, s) => total + s.durationMinutes);
+      // Activity metrics
+      final todayActivities = activities
+          .where((a) => a.startTime.isAfter(todayStart))
+          .toList();
+      final todayActivitiesCount = todayActivities.length;
 
-      final lastMonthSessions = sessions.where((s) => s.startTime.isAfter(twoMonthsAgo) && s.startTime.isBefore(monthAgo)).toList();
-      final lastMonthFocusMinutes = lastMonthSessions.fold<int>(0, (total, s) => total + s.durationMinutes);
-
-      // 4.4 Activities counts
       final thisWeekActivities = activities.where((a) => a.startTime.isAfter(weekAgo)).toList();
       final thisWeekActivitiesCount = thisWeekActivities.length;
 
-      final lastWeekActivities = activities.where((a) => a.startTime.isAfter(twoWeeksAgo) && a.startTime.isBefore(weekAgo)).toList();
-      final lastWeekActivitiesCount = lastWeekActivities.length;
-
-      final thisMonthActivities = activities.where((a) => a.startTime.isAfter(monthAgo)).toList();
-      final thisMonthActivitiesCount = thisMonthActivities.length;
-
-      final lastMonthActivities = activities.where((a) => a.startTime.isAfter(twoMonthsAgo) && a.startTime.isBefore(monthAgo)).toList();
-      final lastMonthActivitiesCount = lastMonthActivities.length;
-
-      // 4.5 Goal stats
+      // Goal metrics
       final totalGoalsCount = goals.length;
       final completedGoalsCount = goals.where((g) => g.isCompleted).length;
       final goalCompletionRate = totalGoalsCount > 0 ? (completedGoalsCount / totalGoalsCount) : 0.0;
 
-      // 4.6 Streak stats
+      // Streak metrics
       final currentStreak = streak?.currentStreak ?? 0;
 
+      // Brain games metrics
+      final totalBrainGamesPlays = brainGames.fold<int>(0, (total, g) => total + g.totalPlays);
+
+      // Achievements metrics
+      final unlockedAchievementsCount = achievements.where((a) => a.unlocked).length;
+      final thisWeekAchievementsCount = achievements
+          .where((a) => a.unlocked && a.unlockedAt != null && a.unlockedAt!.isAfter(weekAgo))
+          .length;
+
       // --- Weighted Productivity Score Formula (0-100) ---
-      // Weight 1: Focus Time (35%): Target 15 hours / week (900 mins)
-      final focusScore = ((thisWeekFocusMinutes / 900.0) * 35.0).clamp(0.0, 35.0);
-      // Weight 2: Goal Completion Rate (25%)
-      final goalScore = totalGoalsCount > 0 ? (goalCompletionRate * 25.0) : 25.0; // default 25 if no goals
-      // Weight 3: Activity Completion (20%): Target 7 tasks / week
-      final activityScore = ((thisWeekActivitiesCount / 7.0) * 20.0).clamp(0.0, 20.0);
-      // Weight 4: Streak Consistency (20%): Target 5 days streak
-      final streakScore = ((currentStreak / 5.0) * 20.0).clamp(0.0, 20.0);
+      // 1. Focus duration (30%): Target 15 hours / week (900 mins)
+      final focusScore = ((thisWeekFocusMinutes / 900.0) * 30.0).clamp(0.0, 30.0);
+      // 2. Goal completion (20%)
+      final goalScore = totalGoalsCount > 0 ? (goalCompletionRate * 20.0) : 20.0;
+      // 3. Tasks completion (15%): Target 7 tasks / week
+      final activityScore = ((thisWeekActivitiesCount / 7.0) * 15.0).clamp(0.0, 15.0);
+      // 4. Streak consistency (15%): Target 5 days streak
+      final streakScore = ((currentStreak / 5.0) * 15.0).clamp(0.0, 15.0);
+      // 5. Brain games consistency (10%): Target 3 plays
+      final brainScore = ((totalBrainGamesPlays / 3.0) * 10.0).clamp(0.0, 10.0);
+      // 6. Achievements unlocked (10%): Target 5 unlocked
+      final achievementScore = ((unlockedAchievementsCount / 5.0) * 10.0).clamp(0.0, 10.0);
 
-      final productivityScore = (focusScore + goalScore + activityScore + streakScore).round().clamp(0, 100);
+      final productivityScore = (focusScore + goalScore + activityScore + streakScore + brainScore + achievementScore).round().clamp(0, 100);
 
-      // --- Percentage Changes for Trend Analysis ---
+      // --- Percentage Changes ---
       double getPercentageChange(double current, double previous) {
         if (previous == 0) return current > 0 ? 100.0 : 0.0;
         return ((current - previous) / previous) * 100.0;
       }
-
       final focusWeekChange = getPercentageChange(thisWeekFocusMinutes.toDouble(), lastWeekFocusMinutes.toDouble());
-      final focusMonthChange = getPercentageChange(thisMonthFocusMinutes.toDouble(), lastMonthFocusMinutes.toDouble());
-      final activityWeekChange = getPercentageChange(thisWeekActivitiesCount.toDouble(), lastWeekActivitiesCount.toDouble());
-      final activityMonthChange = getPercentageChange(thisMonthActivitiesCount.toDouble(), lastMonthActivitiesCount.toDouble());
 
-      final trendComparison = {
-        'thisWeekFocusMinutes': thisWeekFocusMinutes,
-        'lastWeekFocusMinutes': lastWeekFocusMinutes,
-        'focusWeekChangePercentage': focusWeekChange,
-        'thisMonthFocusMinutes': thisMonthFocusMinutes,
-        'lastMonthFocusMinutes': lastMonthFocusMinutes,
-        'focusMonthChangePercentage': focusMonthChange,
-        'thisWeekActivities': thisWeekActivitiesCount,
-        'lastWeekActivities': lastWeekActivitiesCount,
-        'activityWeekChangePercentage': activityWeekChange,
-        'thisMonthActivities': thisMonthActivitiesCount,
-        'lastMonthActivities': lastMonthActivitiesCount,
-        'activityMonthChangePercentage': activityMonthChange,
-      };
-
-      // --- AI Summaries & Insights Generation ---
       // Determine Top Category
       final categoryCounts = <String, int>{};
       for (final a in activities) {
@@ -177,7 +229,7 @@ class FirestoreAICoachRepository implements AICoachRepository {
         }
       });
 
-      // Time of Day Analysis
+      // Peak Focus Time of Day
       int morningSessions = 0;
       int afternoonSessions = 0;
       int eveningSessions = 0;
@@ -200,89 +252,153 @@ class FirestoreAICoachRepository implements AICoachRepository {
         productiveTimeRange = "7 PM and 9 PM";
       }
 
-      // Generate Summaries
-      final dailySummary = "You completed $todaySessionsCount focus sessions today, totaling $todayFocusMinutes minutes. "
-          "${todaySessionsCount > 0 ? 'Excellent work showing up today!' : 'Let\'s start a Pomodoro timer to unlock your focus score.'}";
-
-      final weeklySummary = "This week you completed $thisWeekFocusMinutes focus minutes across ${thisWeekSessions.length} sessions, "
-          "representing a ${focusWeekChange >= 0 ? 'growth' : 'decrease'} of ${focusWeekChange.abs().toStringAsFixed(0)}% compared to last week. "
-          "You completed $thisWeekActivitiesCount tasks with a goal completion rate of ${(goalCompletionRate * 100).toStringAsFixed(0)}%.";
-
-      final monthlySummary = "Over the past 30 days, your focus duration has reached ${(thisMonthFocusMinutes / 60.0).toStringAsFixed(1)} hours. "
-          "Your overall focus consistency has changed by ${focusMonthChange.toStringAsFixed(0)}% month-over-month. "
-          "Your streak reached a peak of ${streak?.longestStreak ?? 0} days.";
-
-      // Daily Advice
-      String dailyAdvice;
-      if (todaySessionsCount >= 2) {
-        dailyAdvice = "You've crushed your daily targets! Continue this excellent momentum tomorrow.";
-      } else {
-        final needed = 2 - todaySessionsCount;
-        dailyAdvice = "Complete $needed more focus session${needed > 1 ? 's' : ''} to maintain your streak.";
-      }
-
-      // Weekly Insight
-      final weeklyInsight = "You are most productive between $productiveTimeRange. Protect this peak focus window by minimizing interruptions.";
-
-      // Recommendations Lists
-      final goalRecommendations = <String>[];
-      if (goals.isEmpty) {
-        goalRecommendations.add("Create your first goal in the '$topCategory' category to outline your target milestones.");
-      } else {
-        final activeGoals = goals.where((g) => g.status == 'Active' && !g.isCompleted).toList();
-        if (activeGoals.isNotEmpty) {
-          final target = activeGoals.first;
-          goalRecommendations.add("Focus on '${target.title}' this week. Devote two 50-minute deep work sessions to make major progress.");
+      // Student Hub metrics calculations
+      double totalCredits = 0.0;
+      double totalPoints = 0.0;
+      for (final s in subjects) {
+        if (s.isCompleted && s.gradePoint != null) {
+          totalCredits += s.credits;
+          totalPoints += (s.credits * s.gradePoint!);
         }
-        goalRecommendations.add("Consider setting a secondary goal in '$topCategory' to track peripheral learning items.");
+      }
+      final currentCGPA = totalCredits > 0 ? (totalPoints / totalCredits) : 0.0;
+
+      final lowAttendanceWarnings = <String>[];
+      for (final s in subjects) {
+        final logs = attendanceLogs.where((log) => log.subjectId == s.id).toList();
+        if (logs.isNotEmpty) {
+          final presents = logs.where((log) => log.status == 'present').length;
+          final absents = logs.where((log) => log.status == 'absent').length;
+          final total = presents + absents;
+          if (total > 0) {
+            final rate = (presents / total) * 100.0;
+            if (rate < 75.0) {
+              lowAttendanceWarnings.add(
+                "Attendance in '${s.name}' (${s.code}) is ${rate.toStringAsFixed(1)}%, which is below the 75% requirement. Attend upcoming classes! ⚠️"
+              );
+            }
+          }
+        }
       }
 
-      final focusImprovementTips = <String>[
-        "Your peak focus occurs during the window of $productiveTimeRange. Put your phone in Do Not Disturb during these sessions.",
-        "Your top activity category is '$topCategory'. Try linking your focus sessions to these tasks using the selector in the Timer screen.",
-        "Take a mandatory 5-minute break after completing a 25-minute Pomodoro timer to prevent cognitive fatigue."
+      final pendingAssignments = assignments.where((a) => a.status == 'Pending').toList();
+      final urgentAssignments = pendingAssignments.where((a) {
+        final difference = a.dueDate.difference(now).inDays;
+        return difference >= 0 && difference <= 3;
+      }).toList();
+
+      final interviewingPlacements = placements.where((p) => p.status == 'Interviewing').toList();
+
+      // --- 1. Daily AI Briefing ---
+      String studentBrief = "";
+      if (currentCGPA > 0) {
+        studentBrief += " Your current CGPA is ${currentCGPA.toStringAsFixed(2)}.";
+      }
+      if (pendingAssignments.isNotEmpty) {
+        studentBrief += " You have ${pendingAssignments.length} pending assignments (${urgentAssignments.length} due within 3 days).";
+      }
+      if (lowAttendanceWarnings.isNotEmpty) {
+        studentBrief += " Critical: Attendance is low in ${lowAttendanceWarnings.length} subjects.";
+      }
+
+      final dailyBriefing = "Today, you completed $todaySessionsCount focus sessions, totaling $todayFocusMinutes minutes, and logged $todayActivitiesCount activities. "
+          "Your current active streak is $currentStreak days. "
+          "${todaySessionsCount > 0 ? 'You are doing great! Keep up the momentum.' : 'Start a focus session today to activate your daily productivity loop!'}"
+          "$studentBrief";
+
+      // --- 2. Weekly AI Review ---
+      String studentWeekly = "";
+      final completedThisWeek = assignments.where((a) => a.status == 'Submitted' && a.dueDate.isAfter(weekAgo)).length;
+      if (completedThisWeek > 0) {
+        studentWeekly += " You submitted $completedThisWeek assignments this week.";
+      }
+      if (placements.isNotEmpty) {
+        final applicationsCount = placements.where((p) => p.createdAt.isAfter(weekAgo)).length;
+        if (applicationsCount > 0) {
+          studentWeekly += " You initiated $applicationsCount new job/internship applications.";
+        }
+      }
+
+      final weeklyReview = "You logged $thisWeekFocusMinutes focus minutes across ${thisWeekSessions.length} sessions this week. "
+          "This is a ${focusWeekChange >= 0 ? 'growth' : 'reduction'} of ${focusWeekChange.abs().toStringAsFixed(0)}% compared to last week. "
+          "You completed $thisWeekActivitiesCount tasks and unlocked $thisWeekAchievementsCount achievements."
+          "$studentWeekly";
+
+      // --- 3. Productivity Insights ---
+      String studentInsights = "";
+      if (interviewingPlacements.isNotEmpty) {
+        studentInsights += " You have active interviews with ${interviewingPlacements.length} companies: ${interviewingPlacements.map((p) => p.company).join(', ')}.";
+      }
+
+      final productivityInsights = "Your peak focus window occurs between $productiveTimeRange. "
+          "Your top activity category is '$topCategory'. "
+          "You have played $totalBrainGamesPlays total brain games training sessions, keeping your cognitive focus active."
+          "$studentInsights";
+
+      // --- 4. Focus Recommendations ---
+      final focusRecommendations = <String>[
+        "Schedule two 50-minute deep work sessions during your peak productivity hours ($productiveTimeRange).",
+        "Take a structured 5-minute break after every 25 minutes of focus to maintain high performance.",
+        "Connect your focus timer sessions directly to '$topCategory' activities to accurately map your cognitive logs."
       ];
-
-      final timeManagementSuggestions = <String>[
-        "Schedule two blocks of 50-minute Deep Work sessions around $productiveTimeRange when your cognitive energy is highest.",
-        "Review your pending list of ${activities.length} logged tasks and delegate 30 minutes to review completed items.",
-        "Set a weekly calendar buffer on Fridays to reflect on your goal milestones and adjust next week's focus target hours."
-      ];
-
-      final productivityWarnings = <String>[];
-      if (focusWeekChange < -15) {
-        productivityWarnings.add("Your focus minutes fell by ${focusWeekChange.abs().toStringAsFixed(0)}% this week compared to last week.");
-      }
-      if (currentStreak < 2) {
-        productivityWarnings.add("Your active streak is currently $currentStreak. Complete a focus session today to build consistency!");
-      }
-      if (productivityWarnings.isEmpty) {
-        productivityWarnings.add("No productivity warnings! You are maintaining a healthy balance and focus rate.");
+      if (urgentAssignments.isNotEmpty) {
+        focusRecommendations.add("Schedule a 45-minute study focus block for assignment '${urgentAssignments.first.title}' today.");
       }
 
-      final goalSuggestions = goals.isEmpty
-          ? ["Create a goal to study or code daily."]
-          : goals.take(2).map((g) => "Spend 45 minutes on '${g.title}' to boost completion progress.").toList();
+      // --- 5. Goal Recommendations ---
+      final goalRecommendations = <String>[];
+      final activeGoals = goals.where((g) => g.status == 'Active' && !g.isCompleted).toList();
+      if (goals.isEmpty) {
+        goalRecommendations.add("Create your first personal milestone or goal to kickstart structured target tracking.");
+      } else {
+        if (activeGoals.isNotEmpty) {
+          goalRecommendations.add("Devote your next deep work session specifically to making progress on goal '${activeGoals.first.title}'.");
+          goalRecommendations.add("Set a minor milestone for '${activeGoals.first.title}' to break down the work.");
+        }
+        goalRecommendations.add("Review your goal completion rate (currently ${(goalCompletionRate * 100).toStringAsFixed(0)}%) and check off completed goals.");
+      }
+      if (lowAttendanceWarnings.isNotEmpty) {
+        goalRecommendations.add("Set a goal to attend all classes for low-attendance subjects to recover attendance.");
+      }
+
+      // --- 6. Streak Predictions ---
+      final streakPredictions = <String>[];
+      final completedToday = todaySessions.where((s) => s.completed).length;
+      if (currentStreak > 0) {
+        if (completedToday > 0) {
+          streakPredictions.add("Safe. Your streak is secure for today! 🔥");
+        } else {
+          streakPredictions.add("Warning: Complete at least one focus session today to preserve your $currentStreak-day streak! ⚠️");
+        }
+      } else {
+        streakPredictions.add("Start a 25-minute focus session today to kickstart a new streak! 🚀");
+      }
+      streakPredictions.add("Maintain a consistent session start time to automatically form a strong daily habit chain.");
+      streakPredictions.addAll(lowAttendanceWarnings);
+
+      final summaryMap = {
+        'dailyBriefing': dailyBriefing,
+        'weeklyReview': weeklyReview,
+        'productivityInsights': productivityInsights,
+      };
+
+      final recommendationsMap = {
+        'focus': focusRecommendations,
+        'goals': goalRecommendations,
+        'streaks': streakPredictions,
+      };
+
 
       final insightReport = AIInsightModel(
         id: userId,
         userId: userId,
+        summary: summaryMap,
+        recommendations: recommendationsMap,
         productivityScore: productivityScore,
-        dailySummary: dailySummary,
-        weeklySummary: weeklySummary,
-        monthlySummary: monthlySummary,
-        goalRecommendations: goalRecommendations,
-        focusImprovementTips: focusImprovementTips,
-        timeManagementSuggestions: timeManagementSuggestions,
-        productivityWarnings: productivityWarnings,
-        dailyAdvice: dailyAdvice,
-        weeklyInsight: weeklyInsight,
-        goalSuggestions: goalSuggestions,
-        trendComparison: trendComparison,
-        createdAt: DateTime.now(),
+        generatedAt: now,
       );
 
-      // Save to Firestore cached collection
+      // Save to Firestore
       await _collection.doc(userId).set(insightReport.toMap());
       return insightReport;
     } catch (_) {

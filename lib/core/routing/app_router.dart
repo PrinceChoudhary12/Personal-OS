@@ -19,8 +19,13 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/activities/presentation/screens/activity_detail_screen.dart';
 import '../../features/activities/presentation/screens/create_edit_activity_screen.dart';
 import '../../features/ai_coach/presentation/screens/ai_coach_screen.dart';
-import '../../features/scheduler/presentation/screens/schedule_screen.dart';
+import '../../features/scheduler/presentation/screens/scheduler_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
+import '../../features/achievements/presentation/screens/achievements_screen.dart';
+import '../../features/daily_challenges/presentation/screens/daily_challenges_screen.dart';
+import '../../features/brain_games/presentation/screens/brain_games_screen.dart';
+import '../../features/habits/presentation/screens/habits_screen.dart';
+import '../../features/student_hub/presentation/screens/student_hub_screen.dart';
 import 'navigation_scaffold.dart';
 import 'router_notifier.dart';
 
@@ -99,18 +104,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CreateEditGoalScreen(editGoalId: id);
         },
       ),
-      GoRoute(
-        path: '/ai-coach',
-        builder: (context, state) => const AICoachScreen(),
-      ),
-      GoRoute(
-        path: '/schedule',
-        builder: (context, state) => const ScheduleScreen(),
-      ),
-      GoRoute(
-        path: '/notifications',
-        builder: (context, state) => const NotificationsScreen(),
-      ),
+
       // ── Protected Shell (bottom nav tabs) ─────────────────────────────────
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -142,8 +136,41 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/analytics',
             builder: (context, state) => const AnalyticsScreen(),
           ),
+          GoRoute(
+            path: '/achievements',
+            builder: (context, state) => const AchievementsScreen(),
+          ),
+          GoRoute(
+            path: '/daily-challenges',
+            builder: (context, state) => const DailyChallengesScreen(),
+          ),
+          GoRoute(
+            path: '/brain-games',
+            builder: (context, state) => const BrainGamesScreen(),
+          ),
+          GoRoute(
+            path: '/scheduler',
+            builder: (context, state) => const SchedulerScreen(),
+          ),
+          GoRoute(
+            path: '/notifications',
+            builder: (context, state) => const NotificationsScreen(),
+          ),
+          GoRoute(
+            path: '/ai-coach',
+            builder: (context, state) => const AICoachScreen(),
+          ),
+          GoRoute(
+            path: '/habits',
+            builder: (context, state) => const HabitsScreen(),
+          ),
+          GoRoute(
+            path: '/student-hub',
+            builder: (context, state) => const StudentHubScreen(),
+          ),
         ],
       ),
     ],
   );
 });
+

@@ -28,6 +28,30 @@ class NavigationScaffold extends StatelessWidget {
     if (location.startsWith('/analytics')) {
       return 5;
     }
+    if (location.startsWith('/achievements')) {
+      return 6;
+    }
+    if (location.startsWith('/daily-challenges')) {
+      return 7;
+    }
+    if (location.startsWith('/brain-games')) {
+      return 8;
+    }
+    if (location.startsWith('/scheduler')) {
+      return 9;
+    }
+    if (location.startsWith('/notifications')) {
+      return 10;
+    }
+    if (location.startsWith('/ai-coach')) {
+      return 11;
+    }
+    if (location.startsWith('/habits')) {
+      return 12;
+    }
+    if (location.startsWith('/student-hub')) {
+      return 13;
+    }
     return 0; // dashboard
   }
 
@@ -50,6 +74,30 @@ class NavigationScaffold extends StatelessWidget {
         break;
       case 5:
         context.go('/analytics');
+        break;
+      case 6:
+        context.go('/achievements');
+        break;
+      case 7:
+        context.go('/daily-challenges');
+        break;
+      case 8:
+        context.go('/brain-games');
+        break;
+      case 9:
+        context.go('/scheduler');
+        break;
+      case 10:
+        context.go('/notifications');
+        break;
+      case 11:
+        context.go('/ai-coach');
+        break;
+      case 12:
+        context.go('/habits');
+        break;
+      case 13:
+        context.go('/student-hub');
         break;
     }
   }
@@ -208,6 +256,14 @@ class NavigationScaffold extends StatelessWidget {
                         _buildSidebarItem(context, index: 3, activeIndex: selectedIndex, label: 'Goals Tracker', icon: Icons.tour_outlined, activeIcon: Icons.tour),
                         _buildSidebarItem(context, index: 4, activeIndex: selectedIndex, label: 'My Streaks', icon: Icons.workspace_premium_outlined, activeIcon: Icons.workspace_premium),
                         _buildSidebarItem(context, index: 5, activeIndex: selectedIndex, label: 'Analytics', icon: Icons.analytics_outlined, activeIcon: Icons.analytics),
+                        _buildSidebarItem(context, index: 6, activeIndex: selectedIndex, label: 'Achievements', icon: Icons.emoji_events_outlined, activeIcon: Icons.emoji_events),
+                        _buildSidebarItem(context, index: 7, activeIndex: selectedIndex, label: 'Daily Challenges', icon: Icons.bolt_outlined, activeIcon: Icons.bolt),
+                        _buildSidebarItem(context, index: 8, activeIndex: selectedIndex, label: 'Brain Games', icon: Icons.psychology_outlined, activeIcon: Icons.psychology),
+                        _buildSidebarItem(context, index: 9, activeIndex: selectedIndex, label: 'Smart Scheduler', icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_today),
+                        _buildSidebarItem(context, index: 10, activeIndex: selectedIndex, label: 'Notifications', icon: Icons.notifications_none_outlined, activeIcon: Icons.notifications),
+                        _buildSidebarItem(context, index: 11, activeIndex: selectedIndex, label: 'AI Coach', icon: Icons.psychology_outlined, activeIcon: Icons.psychology),
+                        _buildSidebarItem(context, index: 12, activeIndex: selectedIndex, label: 'Habits Tracker', icon: Icons.cached_rounded, activeIcon: Icons.cached),
+                        _buildSidebarItem(context, index: 13, activeIndex: selectedIndex, label: 'Student Hub', icon: Icons.school_outlined, activeIcon: Icons.school),
                       ],
                     ),
                   ),
@@ -289,6 +345,10 @@ class NavigationScaffold extends StatelessWidget {
                     _buildMobileNavItem(context, index: 3, activeIndex: selectedIndex, icon: Icons.tour_outlined, activeIcon: Icons.tour, label: 'Goals'),
                     _buildMobileNavItem(context, index: 4, activeIndex: selectedIndex, icon: Icons.workspace_premium_outlined, activeIcon: Icons.workspace_premium, label: 'Streaks'),
                     _buildMobileNavItem(context, index: 5, activeIndex: selectedIndex, icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: 'Stats'),
+                    _buildMobileNavItem(context, index: 6, activeIndex: selectedIndex, icon: Icons.emoji_events_outlined, activeIcon: Icons.emoji_events, label: 'Badges'),
+                    _buildMobileNavItem(context, index: 7, activeIndex: selectedIndex, icon: Icons.bolt_outlined, activeIcon: Icons.bolt, label: 'Daily'),
+                    _buildMobileNavItem(context, index: 8, activeIndex: selectedIndex, icon: Icons.psychology_outlined, activeIcon: Icons.psychology, label: 'Brain'),
+                    _buildMobileNavItem(context, index: 9, activeIndex: selectedIndex, icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_today, label: 'Schedule'),
                   ],
                 ),
               ),
