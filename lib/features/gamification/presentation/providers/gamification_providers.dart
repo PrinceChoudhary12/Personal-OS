@@ -11,6 +11,7 @@ import '../../../focus_timer/presentation/providers/focus_providers.dart';
 import '../../../daily_challenges/presentation/providers/challenge_providers.dart';
 import '../../../brain_games/presentation/providers/brain_games_providers.dart';
 import '../../../habits/presentation/providers/habit_providers.dart';
+import '../../../streaks/presentation/providers/streak_providers.dart';
 
 import '../../data/repositories/firestore_gamification_repository.dart';
 import '../../domain/models/xp_model.dart';
@@ -40,6 +41,7 @@ final gamificationStreamProvider = StreamProvider<XpModel?>((ref) {
   final dailyChallenges = ref.watch(dailyChallengesStreamProvider).valueOrNull ?? [];
   final brainGames = ref.watch(brainGamesStreamProvider).valueOrNull ?? [];
   final habits = ref.watch(habitsStreamProvider).valueOrNull ?? [];
+  final streakModel = ref.watch(streakStreamProvider).valueOrNull;
 
   // Rules:
   // Activity completed = +10 XP
@@ -59,12 +61,64 @@ final gamificationStreamProvider = StreamProvider<XpModel?>((ref) {
   final totalHabitCheckoffs = habits.fold<int>(0, (sum, h) => sum + h.completedDates.length);
   final completedHabitsXp = totalHabitCheckoffs * 15;
 
+  // Achievements unlocked XP calculations (Achievements -> XP):
+  // We award +50 XP for each unlocked non-XP achievement
+  int unlockedAchievementsCount = 0;
+  
+  // Activities achievements
+  if (completedActivitiesCount >= 1) unlockedAchievementsCount++;
+  if (completedActivitiesCount >= 10) unlockedAchievementsCount++;
+  if (completedActivitiesCount >= 50) unlockedAchievementsCount++;
+  if (completedActivitiesCount >= 100) unlockedAchievementsCount++;
+
+  // Goals achievements
+  if (completedGoalsCount >= 1) unlockedAchievementsCount++;
+  if (completedGoalsCount >= 5) unlockedAchievementsCount++;
+  if (completedGoalsCount >= 20) unlockedAchievementsCount++;
+
+  // Focus achievements
+  if (completedSessionsCount >= 1) unlockedAchievementsCount++;
+  final totalFocusHours = sessions
+      .where((s) => s.completed)
+      .fold<int>(0, (sum, s) => sum + s.durationMinutes) / 60.0;
+  if (totalFocusHours >= 10) unlockedAchievementsCount++;
+  if (totalFocusHours >= 50) unlockedAchievementsCount++;
+
+  // Brain games achievements
+  if (brainGamesPlays >= 1) unlockedAchievementsCount++;
+  if (brainGamesPlays >= 10) unlockedAchievementsCount++;
+  final reactionSpeedRec = brainGames.where((g) => g.gameType == 'reaction_speed').firstOrNull;
+  final reactionSpeedBest = reactionSpeedRec?.bestScore ?? 0.0;
+  if (reactionSpeedBest > 0.0 && reactionSpeedBest < 250.0) unlockedAchievementsCount++;
+
+  // Streaks achievements
+  final currentStreakVal = streakModel?.currentStreak ?? 0;
+  final longestStreakVal = streakModel?.longestStreak ?? 0;
+  final maxStreak = currentStreakVal > longestStreakVal ? currentStreakVal : longestStreakVal;
+  if (maxStreak >= 3) unlockedAchievementsCount++;
+  if (maxStreak >= 7) unlockedAchievementsCount++;
+  if (maxStreak >= 30) unlockedAchievementsCount++;
+
+  // Habits achievements
+  if (totalHabitCheckoffs >= 1) unlockedAchievementsCount++;
+  final maxHabitStreak = habits.fold<int>(0, (maxVal, h) {
+    final cur = h.currentStreak;
+    final lon = h.longestStreak;
+    final best = cur > lon ? cur : lon;
+    return best > maxVal ? best : maxVal;
+  });
+  if (maxHabitStreak >= 7) unlockedAchievementsCount++;
+  if (maxHabitStreak >= 21) unlockedAchievementsCount++;
+
+  final achievementsXp = unlockedAchievementsCount * 50;
+
   final expectedTotalXp = (completedActivitiesCount * 10) +
       (completedGoalsCount * 25) +
       (completedSessionsCount * 15) +
       completedChallengesXp +
       completedGamesXp +
-      completedHabitsXp;
+      completedHabitsXp +
+      achievementsXp;
 
   final expectedLevel = LevelCalculator.calculateLevel(expectedTotalXp);
   final xpForCurrent = LevelCalculator.xpForLevel(expectedLevel);

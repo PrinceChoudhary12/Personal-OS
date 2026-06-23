@@ -272,22 +272,35 @@ class NavigationScaffold extends StatelessWidget {
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       children: [
-                        Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.primary, width: 1.5),
-                          ),
-                          child: const CircleAvatar(
-                            backgroundColor: Colors.transparent,
-                            radius: 16,
-                            child: Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(
-                          child: Text(
-                            'Personal OS Member',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => context.push('/profile'),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: AppColors.primary, width: 1.5),
+                                    ),
+                                    child: const CircleAvatar(
+                                      backgroundColor: Colors.transparent,
+                                      radius: 16,
+                                      child: Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 18),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Expanded(
+                                    child: Text(
+                                      'Personal OS Member',
+                                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                         IconButton(

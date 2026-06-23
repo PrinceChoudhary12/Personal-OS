@@ -29,6 +29,10 @@ class HabitController extends StateNotifier<AsyncValue<void>> {
     try {
       await _repo.createHabit(habit);
       state = const AsyncValue.data(null);
+      final userId = habit.userId;
+      if (userId.isNotEmpty) {
+        await _ref.read(streakRepositoryProvider).calculateStreakFromActivities(userId);
+      }
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
@@ -39,6 +43,10 @@ class HabitController extends StateNotifier<AsyncValue<void>> {
     try {
       await _repo.updateHabit(habit);
       state = const AsyncValue.data(null);
+      final userId = habit.userId;
+      if (userId.isNotEmpty) {
+        await _ref.read(streakRepositoryProvider).calculateStreakFromActivities(userId);
+      }
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
@@ -49,6 +57,11 @@ class HabitController extends StateNotifier<AsyncValue<void>> {
     try {
       await _repo.deleteHabit(id);
       state = const AsyncValue.data(null);
+      final authState = _ref.read(firebaseAuthStateProvider);
+      final user = authState.valueOrNull;
+      if (user != null) {
+        await _ref.read(streakRepositoryProvider).calculateStreakFromActivities(user.uid);
+      }
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }
@@ -59,6 +72,11 @@ class HabitController extends StateNotifier<AsyncValue<void>> {
     try {
       await _repo.toggleHabitCompletion(habitId, dateStr);
       state = const AsyncValue.data(null);
+      final authState = _ref.read(firebaseAuthStateProvider);
+      final user = authState.valueOrNull;
+      if (user != null) {
+        await _ref.read(streakRepositoryProvider).calculateStreakFromActivities(user.uid);
+      }
     } catch (err, stack) {
       state = AsyncValue.error(err, stack);
     }

@@ -101,7 +101,24 @@ class FirestoreStreakRepository implements StreakRepository {
         }
       }
 
-      if (activities.isEmpty && sessionStartTimes.isEmpty) {
+      // Fetch habits and merge completed dates
+      final habitsSnapshot = await _firestore
+          .collection('habits')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      final List<String> habitDatesList = [];
+      for (final doc in habitsSnapshot.docs) {
+        final data = doc.data();
+        final rawCompleted = data['completedDates'];
+        if (rawCompleted is List) {
+          for (final val in rawCompleted) {
+            habitDatesList.add(val.toString());
+          }
+        }
+      }
+
+      if (activities.isEmpty && sessionStartTimes.isEmpty && habitDatesList.isEmpty) {
         final streak = StreakModel(
           userId: userId,
           currentStreak: 0,
@@ -122,6 +139,10 @@ class FirestoreStreakRepository implements StreakRepository {
       for (final startTime in sessionStartTimes) {
         final local = startTime.toLocal();
         activityDates.add('${local.year}-${local.month.toString().padLeft(2, '0')}-${local.day.toString().padLeft(2, '0')}');
+      }
+
+      for (final habitDate in habitDatesList) {
+        activityDates.add(habitDate);
       }
 
       final sortedDateStrings = activityDates.toList()..sort((a, b) => b.compareTo(a)); // desc
