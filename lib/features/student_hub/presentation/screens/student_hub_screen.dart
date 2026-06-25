@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 
 import '../../../../core/theme/app_colors.dart';
@@ -69,7 +70,6 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final subjectsAsync = ref.watch(subjectsStreamProvider);
     final attendanceAsync = ref.watch(attendanceStreamProvider);
     final assignmentsAsync = ref.watch(assignmentsStreamProvider);
@@ -82,27 +82,51 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     final placements = placementsAsync.valueOrNull ?? [];
     final profile = profileAsync.valueOrNull;
 
-    final isWide = MediaQuery.of(context).size.width > 900;
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Student Hub',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: -0.6),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+            letterSpacing: -0.6,
+          ),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: !isWide,
-          indicatorColor: AppColors.primary,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: theme.hintColor,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Overview'),
-            Tab(icon: Icon(Icons.book_outlined), text: 'Subjects'),
-            Tab(icon: Icon(Icons.check_circle_outline), text: 'Attendance'),
-            Tab(icon: Icon(Icons.assignment_outlined), text: 'Assignments'),
-            Tab(icon: Icon(Icons.work_outline), text: 'Placements'),
-          ],
+        centerTitle: false,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.darkBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  color: AppColors.darkSurfaceCard,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.darkBorder),
+                ),
+                labelColor: AppColors.primary,
+                unselectedLabelColor: Colors.grey,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Overview'),
+                  Tab(text: 'Subjects'),
+                  Tab(text: 'Attendance'),
+                  Tab(text: 'Assignments'),
+                  Tab(text: 'Placements'),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
       body: TabBarView(
@@ -180,13 +204,17 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     final activePlacements = placements.where((p) => p.status == 'Interviewing' || p.status == 'Assessment').toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Academic Performance',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              letterSpacing: -0.4,
+            ),
           ),
           const SizedBox(height: 16),
           Row(
@@ -214,57 +242,67 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Semester Progress',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.darkSurfaceCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.darkBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Semester Progress',
+                          style: GoogleFonts.outfit(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: -0.2,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Semester $currentSem (${_formatDate(semStart)} to ${_formatDate(semEnd)})',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        '${(semesterProgress * 100).toStringAsFixed(0)}%',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: semesterProgress,
-                      minHeight: 12,
-                      backgroundColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-                      color: AppColors.primary,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Semester $currentSem (${_formatDate(semStart)} to ${_formatDate(semEnd)})',
+                          style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
                     ),
+                    Text(
+                      '${(semesterProgress * 100).toStringAsFixed(0)}%',
+                      style: GoogleFonts.outfit(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: semesterProgress,
+                    minHeight: 10,
+                    backgroundColor: AppColors.darkBackground,
+                    color: AppColors.primary,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$elapsedDays of $totalDays days elapsed this semester.',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '$elapsedDays of $totalDays days elapsed this semester.',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
           if (warnings.isNotEmpty) ...[
             Container(
               padding: const EdgeInsets.all(16),
@@ -276,13 +314,13 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: AppColors.error),
-                      SizedBox(width: 8),
+                      const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                      const SizedBox(width: 8),
                       Text(
                         'Low Attendance Alert',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error),
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.error),
                       ),
                     ],
                   ),
@@ -294,7 +332,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                             const Icon(Icons.arrow_right_rounded, color: AppColors.error, size: 20),
                             Text(
                               w,
-                              style: const TextStyle(fontSize: 13, color: AppColors.error),
+                              style: GoogleFonts.inter(fontSize: 13, color: AppColors.error),
                             ),
                           ],
                         ),
@@ -302,7 +340,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
           ],
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -343,44 +381,56 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     required IconData icon,
     required Color color,
   }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withValues(alpha: 0.15)),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey,
+                    letterSpacing: 0.5,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: GoogleFonts.outfit(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.4,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(fontSize: 11, color: Colors.grey),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -393,61 +443,67 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     required List<String> subtitles,
     required String emptyMessage,
   }) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 20, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            if (items.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24.0),
-                child: Center(
-                  child: Text(
-                    emptyMessage,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+            ],
+          ),
+          const Divider(height: 24, color: AppColors.darkBorder),
+          if (items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              child: Center(
+                child: Text(
+                  emptyMessage,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: items.length.clamp(0, 4),
-                separatorBuilder: (_, __) => const Divider(height: 16),
-                itemBuilder: (context, i) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        items[i],
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitles[i],
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                    ],
-                  );
-                },
               ),
-          ],
-        ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length.clamp(0, 4),
+              separatorBuilder: (_, __) => const Divider(height: 16, color: AppColors.darkBorder),
+              itemBuilder: (context, i) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      items[i],
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitles[i],
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                );
+              },
+            ),
+        ],
       ),
     );
   }
@@ -461,18 +517,23 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.menu_book, size: 64, color: Colors.grey),
+            const Icon(Icons.menu_book_rounded, size: 64, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'No subjects tracked yet.',
-              style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+              style: GoogleFonts.outfit(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             ElevatedButton.icon(
               onPressed: () => _showAddEditSubjectDialog(context),
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add_rounded),
               label: const Text('Add Subject'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ],
         ),
@@ -484,52 +545,66 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
         onPressed: () => _showAddEditSubjectDialog(context),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
       body: ListView.builder(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         itemCount: subjects.length,
         itemBuilder: (context, index) {
           final s = subjects[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: AppColors.darkSurfaceCard,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.darkBorder),
+            ),
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              leading: CircleAvatar(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                foregroundColor: AppColors.primary,
-                child: Text(s.code.isNotEmpty ? s.code.substring(0, 1).toUpperCase() : '?'),
+              leading: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+                ),
+                child: Text(
+                  s.code.isNotEmpty ? s.code.substring(0, 1).toUpperCase() : '?',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 16),
+                ),
               ),
               title: Text(
                 '${s.name} (${s.code})',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: -0.2),
               ),
               subtitle: Text(
                 'Semester ${s.semester} • ${s.credits} Credits ${s.isCompleted ? '• Completed' : ''}',
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (s.isCompleted && s.grade != null)
+                  if (s.isCompleted && s.grade != null) ...[
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppColors.secondary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.15)),
                       ),
                       child: Text(
                         'Grade: ${s.grade}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 12),
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 11),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                  ],
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => _showAddEditSubjectDialog(context, s),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                     onPressed: () => ref.read(studentHubControllerProvider.notifier).deleteSubject(s.id),
                   ),
                 ],
@@ -624,13 +699,16 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     List<AttendanceModel> attendanceLogs,
   ) {
     if (subjects.isEmpty) {
-      return const Center(
-        child: Text('Create subjects first to track attendance.', style: TextStyle(color: Colors.grey)),
+      return Center(
+        child: Text(
+          'Create subjects first to track attendance.',
+          style: GoogleFonts.inter(color: Colors.grey),
+        ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       itemCount: subjects.length,
       itemBuilder: (context, index) {
         final s = subjects[index];
@@ -643,9 +721,13 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
         final rate = totalClasses > 0 ? (presents / totalClasses) * 100.0 : 100.0;
         final isWarning = rate < 75.0;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.darkBorder),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -658,8 +740,15 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(s.code, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            s.name,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: -0.2),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            s.code,
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                          ),
                         ],
                       ),
                     ),
@@ -668,7 +757,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                       children: [
                         Text(
                           '${rate.toStringAsFixed(1)}%',
-                          style: TextStyle(
+                          style: GoogleFonts.outfit(
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                             color: isWarning ? AppColors.error : AppColors.secondary,
@@ -676,7 +765,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                         ),
                         Text(
                           '$presents / $totalClasses attended',
-                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                         ),
                       ],
                     ),
@@ -688,7 +777,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                   child: LinearProgressIndicator(
                     value: totalClasses > 0 ? (presents / totalClasses) : 1.0,
                     minHeight: 8,
-                    backgroundColor: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+                    backgroundColor: AppColors.darkBackground,
                     color: isWarning ? AppColors.error : AppColors.secondary,
                   ),
                 ),
@@ -697,29 +786,35 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                   children: [
                     ElevatedButton.icon(
                       onPressed: () => _markAttendanceFast(s.id, 'present'),
-                      icon: const Icon(Icons.check, size: 16),
+                      icon: const Icon(Icons.check_rounded, size: 16),
                       label: const Text('Present'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
                         foregroundColor: AppColors.secondary,
                         elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () => _markAttendanceFast(s.id, 'absent'),
-                      icon: const Icon(Icons.close, size: 16),
+                      icon: const Icon(Icons.close_rounded, size: 16),
                       label: const Text('Absent'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.error.withValues(alpha: 0.1),
                         foregroundColor: AppColors.error,
                         elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                     const Spacer(),
-                    TextButton(
+                    TextButton.icon(
                       onPressed: () => _showAttendanceHistoryModal(context, s, logs),
-                      child: const Text('Log History'),
+                      icon: const Icon(Icons.history_rounded, size: 14),
+                      label: const Text('Logs'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey,
+                      ),
                     ),
                   ],
                 ),
@@ -897,8 +992,11 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     List<AssignmentModel> assignments,
   ) {
     if (subjects.isEmpty) {
-      return const Center(
-        child: Text('Create subjects first to track assignments.', style: TextStyle(color: Colors.grey)),
+      return Center(
+        child: Text(
+          'Create subjects first to track assignments.',
+          style: GoogleFonts.inter(color: Colors.grey),
+        ),
       );
     }
 
@@ -907,21 +1005,36 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
         onPressed: () => _showAddEditAssignmentDialog(context, subjects),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
       body: DefaultTabController(
         length: 3,
         child: Column(
           children: [
-            const TabBar(
-              indicatorColor: AppColors.primary,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: Colors.grey,
-              tabs: [
-                Tab(text: 'Pending'),
-                Tab(text: 'Submitted'),
-                Tab(text: 'Graded'),
-              ],
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.darkBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  color: AppColors.darkSurfaceCard,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.darkBorder),
+                ),
+                labelColor: AppColors.primary,
+                unselectedLabelColor: Colors.grey,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Pending'),
+                  Tab(text: 'Submitted'),
+                  Tab(text: 'Graded'),
+                ],
+              ),
             ),
             Expanded(
               child: TabBarView(
@@ -944,11 +1057,16 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
     List<AssignmentModel> list,
   ) {
     if (list.isEmpty) {
-      return const Center(child: Text('No assignments found here.', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: Text(
+          'No assignments found here.',
+          style: GoogleFonts.inter(color: Colors.grey),
+        ),
+      );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final a = list[index];
@@ -964,11 +1082,15 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                   createdAt: DateTime.now(),
                 ));
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.darkBorder),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -979,27 +1101,39 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(a.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text('${sub.name} (${sub.code})', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            a.title,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: -0.2),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${sub.name} (${sub.code})',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                          ),
                         ],
                       ),
                     ),
-                    if (a.status == 'Graded' && a.score != null)
+                    if (a.status == 'Graded' && a.score != null) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.secondary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.secondary.withValues(alpha: 0.15)),
                         ),
                         child: Text(
                           'Score: ${a.score}/${a.maxScore ?? 100}',
-                          style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold, fontSize: 12),
+                          style: GoogleFonts.inter(color: AppColors.secondary, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(a.description, style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                Text(
+                  a.description,
+                  style: GoogleFonts.inter(fontSize: 13, color: Colors.grey, height: 1.3),
+                ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1007,33 +1141,35 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                     const SizedBox(width: 6),
                     Text(
                       _formatRelativeDate(a.dueDate),
-                      style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
+                      style: GoogleFonts.inter(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                const Divider(height: 24, color: AppColors.darkBorder),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    if (a.status == 'Pending')
+                    if (a.status == 'Pending') ...[
                       ElevatedButton.icon(
                         onPressed: () => _scheduleStudyBlock(context, a),
-                        icon: const Icon(Icons.calendar_today, size: 14),
+                        icon: const Icon(Icons.calendar_today_rounded, size: 14),
                         label: const Text('Schedule Block'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                           foregroundColor: AppColors.primary,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
-                    const SizedBox(width: 8),
+                      const SizedBox(width: 8),
+                    ],
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () => _showAddEditAssignmentDialog(context, subjects, a),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                       onPressed: () => ref.read(studentHubControllerProvider.notifier).deleteAssignment(a.id),
                     ),
                   ],
@@ -1192,24 +1328,39 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
         onPressed: () => _showAddEditPlacementDialog(context),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add_rounded),
       ),
       body: DefaultTabController(
         length: 5,
         child: Column(
           children: [
-            const TabBar(
-              isScrollable: true,
-              indicatorColor: AppColors.primary,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: Colors.grey,
-              tabs: [
-                Tab(text: 'Wishlist'),
-                Tab(text: 'Applied'),
-                Tab(text: 'Interviewing'),
-                Tab(text: 'Offered'),
-                Tab(text: 'Rejected'),
-              ],
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.darkBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: TabBar(
+                isScrollable: true,
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                indicator: BoxDecoration(
+                  color: AppColors.darkSurfaceCard,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.darkBorder),
+                ),
+                labelColor: AppColors.primary,
+                unselectedLabelColor: Colors.grey,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Wishlist'),
+                  Tab(text: 'Applied'),
+                  Tab(text: 'Interviewing'),
+                  Tab(text: 'Offered'),
+                  Tab(text: 'Rejected'),
+                ],
+              ),
             ),
             Expanded(
               child: TabBarView(
@@ -1230,19 +1381,28 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
 
   Widget _buildPlacementList(BuildContext context, List<PlacementModel> list) {
     if (list.isEmpty) {
-      return const Center(child: Text('No applications here.', style: TextStyle(color: Colors.grey)));
+      return Center(
+        child: Text(
+          'No applications here.',
+          style: GoogleFonts.inter(color: Colors.grey),
+        ),
+      );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final p = list[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurfaceCard,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.darkBorder),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1253,45 +1413,54 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(p.company, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text(p.role, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            p.company,
+                            style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: -0.2),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(p.role, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
                         ],
                       ),
                     ),
-                    if (p.salary != null)
+                    if (p.salary != null) ...[
                       Text(
                         p.salary!,
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 14),
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: AppColors.secondary, fontSize: 14),
                       ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (p.location != null)
+                if (p.location != null) ...[
                   Row(
                     children: [
                       const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(p.location!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      Text(p.location!, style: GoogleFonts.inter(fontSize: 11, color: Colors.grey)),
                     ],
                   ),
+                ],
                 if (p.notes != null && p.notes!.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(p.notes!, style: const TextStyle(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic)),
+                  Text(
+                    p.notes!,
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey, fontStyle: FontStyle.italic),
+                  ),
                 ],
                 if (p.interviewDate != null) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_month, size: 14, color: AppColors.primary),
+                      const Icon(Icons.calendar_month_rounded, size: 14, color: AppColors.primary),
                       const SizedBox(width: 6),
                       Text(
                         'Interview Scheduled: ${_formatDate(p.interviewDate!)}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
+                        style: GoogleFonts.inter(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ],
-                const Divider(height: 24),
+                const Divider(height: 24, color: AppColors.darkBorder),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -1300,7 +1469,7 @@ class _StudentHubScreenState extends ConsumerState<StudentHubScreen>
                       onPressed: () => _showAddEditPlacementDialog(context, p),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppColors.error),
+                      icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error),
                       onPressed: () => ref.read(studentHubControllerProvider.notifier).deletePlacement(p.id),
                     ),
                   ],

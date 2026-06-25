@@ -5,8 +5,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../providers/brain_games_providers.dart';
 import '../../domain/models/game_model.dart';
@@ -36,7 +38,6 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
   @override
   Widget build(BuildContext context) {
     final scoresAsync = ref.watch(brainGamesStreamProvider);
-    final theme = Theme.of(context);
 
     if (_activeGameType != null) {
       return _buildActiveGameView(_activeGameType!);
@@ -44,18 +45,22 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Brain Games',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w900,
+            fontSize: 22,
+            letterSpacing: -0.6,
+          ),
         ),
-        centerTitle: true,
+        centerTitle: false,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => context.go('/dashboard'),
         ),
       ),
       body: scoresAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primary)),
         error: (err, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -66,10 +71,10 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Failed to load brain training scores',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 8),
-                Text(err.toString(), textAlign: TextAlign.center),
+                Text(err.toString(), textAlign: TextAlign.center, style: GoogleFonts.inter(color: Colors.grey)),
               ],
             ),
           ),
@@ -79,7 +84,7 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
 
           return Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 900),
                 child: Column(
@@ -87,13 +92,13 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
                   children: [
                     // --- Header Panel ---
                     _buildHeaderCard(context, scores),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
                     // --- Grid of Games ---
                     LayoutBuilder(
                       builder: (context, constraints) {
                         int crossAxisCount = 1;
-                        if (constraints.maxWidth > 700) {
+                        if (constraints.maxWidth > 650) {
                           crossAxisCount = 2;
                         }
                         return GridView.count(
@@ -102,55 +107,60 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio: 1.5,
+                          childAspectRatio: 1.45,
                           children: [
-                            _buildGameCard(
-                              context,
-                              type: 'memory_matrix',
-                              title: 'Memory Matrix',
-                              description: 'Recall the spatial pattern of highlighted tiles on a grid.',
-                              icon: Icons.grid_on_rounded,
-                              accentColor: Colors.blueAccent,
-                              stat: scoreMap['memory_matrix'],
-                            ),
-                            _buildGameCard(
-                              context,
-                              type: 'number_recall',
-                              title: 'Number Recall',
-                              description: 'Remember a number that increases in digit length each round.',
-                              icon: Icons.pin_rounded,
-                              accentColor: Colors.purpleAccent,
-                              stat: scoreMap['number_recall'],
-                            ),
-                            _buildGameCard(
-                              context,
-                              type: 'reaction_speed',
-                              title: 'Reaction Speed',
-                              description: 'Click as fast as you can when the screen turns green.',
-                              icon: Icons.flash_on_rounded,
-                              accentColor: Colors.amberAccent,
-                              stat: scoreMap['reaction_speed'],
-                              isMs: true,
-                            ),
-                            _buildGameCard(
-                              context,
-                              type: 'sequence_memory',
-                              title: 'Sequence Memory',
-                              description: 'Remember an increasing sequence of flashing color pads.',
-                              icon: Icons.repeat_rounded,
-                              accentColor: Colors.tealAccent,
-                              stat: scoreMap['sequence_memory'],
-                            ),
-                            _buildGameCard(
-                              context,
-                              type: 'mental_math',
-                              title: 'Mental Math',
-                              description: 'Solve simple math equations as fast as possible in 30 seconds.',
-                              icon: Icons.calculate_rounded,
-                              accentColor: Colors.redAccent,
-                              stat: scoreMap['mental_math'],
-                            ),
-                          ],
+                             _buildGameCard(
+                               context,
+                               type: 'memory_matrix',
+                               title: 'Memory Matrix',
+                               description: 'Recall the spatial pattern of highlighted tiles on a grid.',
+                               icon: Icons.grid_on_rounded,
+                               accentColor: AppColors.gameMemory,
+                               stat: scoreMap['memory_matrix'],
+                               difficulty: 'Medium',
+                             ),
+                             _buildGameCard(
+                               context,
+                               type: 'number_recall',
+                               title: 'Number Recall',
+                               description: 'Remember a number that increases in digit length each round.',
+                               icon: Icons.pin_rounded,
+                               accentColor: AppColors.gameRecall,
+                               stat: scoreMap['number_recall'],
+                               difficulty: 'Easy',
+                             ),
+                             _buildGameCard(
+                               context,
+                               type: 'reaction_speed',
+                               title: 'Reaction Speed',
+                               description: 'Click as fast as you can when the screen turns green.',
+                               icon: Icons.flash_on_rounded,
+                               accentColor: AppColors.gameReaction,
+                               stat: scoreMap['reaction_speed'],
+                               isMs: true,
+                               difficulty: 'Easy',
+                             ),
+                             _buildGameCard(
+                               context,
+                               type: 'sequence_memory',
+                               title: 'Sequence Memory',
+                               description: 'Remember an increasing sequence of flashing color pads.',
+                               icon: Icons.repeat_rounded,
+                               accentColor: AppColors.gameSequence,
+                               stat: scoreMap['sequence_memory'],
+                               difficulty: 'Hard',
+                             ),
+                             _buildGameCard(
+                               context,
+                               type: 'mental_math',
+                               title: 'Mental Math',
+                               description: 'Solve simple math equations as fast as possible in 30 seconds.',
+                               icon: Icons.calculate_rounded,
+                               accentColor: AppColors.gameMath,
+                               stat: scoreMap['mental_math'],
+                               difficulty: 'Medium',
+                             ),
+                           ],
                         );
                       },
                     ),
@@ -165,87 +175,90 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
   }
 
   Widget _buildHeaderCard(BuildContext context, List<GameModel> scores) {
-    final theme = Theme.of(context);
     final totalPlays = scores.fold<int>(0, (sum, s) => sum + s.totalPlays);
-    
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary.withValues(alpha: 0.05),
-              AppColors.secondary.withValues(alpha: 0.05),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.psychology_rounded, color: AppColors.primary, size: 36),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Brain Training Headquarters',
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Train cognitive speed, recall, and mathematical dexterity.',
-                    style: TextStyle(fontSize: 13, color: theme.hintColor),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          '$totalPlays total plays',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.secondary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          '+20 XP per game',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.secondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.secondary.withValues(alpha: 0.15),
+            AppColors.primary.withValues(alpha: 0.08),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.25)),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.secondary, AppColors.primary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.secondary.withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.psychology_rounded, color: Colors.white, size: 28),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Brain Training Lab',
+                  style: AppTypography.headingMedium.copyWith(
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Train cognitive speed, recall, and math dexterity.',
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.darkTextSecondary),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildPill('$totalPlays plays', AppColors.primary),
+                    const SizedBox(width: 8),
+                    _buildPill('+20 XP per game', AppColors.accent),
+                    const SizedBox(width: 8),
+                    _buildPill('5 games', AppColors.secondary),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPill(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.labelSmall.copyWith(color: color, fontSize: 10),
       ),
     );
   }
@@ -259,81 +272,137 @@ class _BrainGamesScreenState extends ConsumerState<BrainGamesScreen> {
     required Color accentColor,
     required GameModel? stat,
     bool isMs = false,
+    String difficulty = 'Medium',
   }) {
-    final theme = Theme.of(context);
     final plays = stat?.totalPlays ?? 0;
-    
-    String bestScoreText = 'N/A';
-    if (stat != null) {
-      bestScoreText = isMs 
-          ? '${stat.bestScore.toInt()} ms' 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    String bestScoreText = plays > 0 ? 'N/A' : '–';
+    if (stat != null && stat.bestScore > 0) {
+      bestScoreText = isMs
+          ? '${stat.bestScore.toInt()} ms'
           : '${stat.bestScore.toInt()} pts';
     }
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: InkWell(
+    final difficultyColor = difficulty == 'Easy'
+        ? AppColors.success
+        : difficulty == 'Hard'
+            ? AppColors.error
+            : AppColors.warning;
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
         onTap: () => _startGame(type),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurfaceCard : AppColors.lightCard,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: accentColor.withValues(alpha: 0.25),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Top row: icon + difficulty
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
+                      gradient: LinearGradient(
+                        colors: [accentColor, accentColor.withValues(alpha: 0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                    child: Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 24),
+                    child: Icon(icon, color: Colors.white, size: 22),
                   ),
-                  const Icon(Icons.arrow_forward_rounded, color: Colors.grey, size: 18),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: difficultyColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: difficultyColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Text(
+                      difficulty,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: difficultyColor,
+                        fontSize: 9,
+                      ),
+                    ),
+                  ),
                 ],
               ),
+              // Title + description
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: AppTypography.headingSmall.copyWith(
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12, color: theme.hintColor, height: 1.2),
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.darkTextSecondary,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
+              // Bottom: plays + best score
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Plays: $plays',
-                    style: TextStyle(fontSize: 11, color: theme.hintColor),
+                  Row(
+                    children: [
+                      Icon(Icons.play_circle_outline_rounded, size: 13, color: accentColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$plays plays',
+                        style: AppTypography.caption.copyWith(color: AppColors.darkTextSecondary),
+                      ),
+                    ],
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(6),
+                      color: accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'Best: $bestScoreText',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color),
+                      bestScoreText,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: accentColor,
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 ],

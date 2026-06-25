@@ -13,6 +13,9 @@ import '../../../student_hub/domain/models/subject_model.dart';
 import '../../../student_hub/domain/models/attendance_model.dart';
 import '../../../student_hub/domain/models/assignment_model.dart';
 import '../../../student_hub/domain/models/placement_model.dart';
+import '../../../exams/domain/models/exam_model.dart';
+import '../../../exams/domain/models/revision_plan_model.dart';
+import '../../../knowledge_vault/domain/models/note_model.dart';
 
 
 class FirestoreAICoachRepository implements AICoachRepository {
@@ -144,6 +147,37 @@ class FirestoreAICoachRepository implements AICoachRepository {
             .get();
         placements = placementsSnapshot.docs
             .map((doc) => PlacementModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (_) {}
+
+      List<ExamModel> exams = [];
+      List<RevisionPlanModel> revisionPlans = [];
+      try {
+        final examsSnapshot = await _firestore
+            .collection('exams')
+            .where('userId', isEqualTo: userId)
+            .get();
+        exams = examsSnapshot.docs
+            .map((doc) => ExamModel.fromMap(doc.data(), doc.id))
+            .toList();
+
+        final plansSnapshot = await _firestore
+            .collection('revision_plans')
+            .where('userId', isEqualTo: userId)
+            .get();
+        revisionPlans = plansSnapshot.docs
+            .map((doc) => RevisionPlanModel.fromMap(doc.data(), doc.id))
+            .toList();
+      } catch (_) {}
+
+      List<NoteModel> notes = [];
+      try {
+        final notesSnapshot = await _firestore
+            .collection('notes')
+            .where('userId', isEqualTo: userId)
+            .get();
+        notes = notesSnapshot.docs
+            .map((doc) => NoteModel.fromMap(doc.data(), doc.id))
             .toList();
       } catch (_) {}
 
@@ -359,6 +393,68 @@ class FirestoreAICoachRepository implements AICoachRepository {
       }
       if (lowAttendanceWarnings.isNotEmpty) {
         goalRecommendations.add("Set a goal to attend all classes for low-attendance subjects to recover attendance.");
+      }
+
+      // --- Exam Tracker Recommendations Integration ---
+      if (exams.isNotEmpty) {
+        final nowTemp = DateTime.now();
+        final todayTemp = DateTime(nowTemp.year, nowTemp.month, nowTemp.day);
+        final upcomingExams = exams.where((e) {
+          final targetDate = DateTime(e.examDate.year, e.examDate.month, e.examDate.day);
+          return targetDate.isAfter(todayTemp) || targetDate.isAtSameMomentAs(todayTemp);
+        }).toList();
+
+        if (upcomingExams.isNotEmpty) {
+          upcomingExams.sort((a, b) => a.examDate.compareTo(b.examDate));
+          final urgentExam = upcomingExams.first;
+          final remainingDays = urgentExam.daysRemaining;
+
+          focusRecommendations.add(
+            "Upcoming Exam Alert: Your ${urgentExam.subject} exam is in $remainingDays ${remainingDays == 1 ? 'day' : 'days'}. Allocate focus blocks for review!"
+          );
+
+          final examPlans = revisionPlans.where((p) => p.examId == urgentExam.id).toList();
+          if (examPlans.isEmpty) {
+            goalRecommendations.add(
+              "Revision Suggestion: Set up a study plan for '${urgentExam.subject}' by adding key syllabus topics in the Exam Tracker."
+            );
+          } else {
+            final pending = examPlans.where((p) => !p.isCompleted).toList();
+            if (pending.isNotEmpty) {
+              focusRecommendations.add(
+                "Smart Study Suggestion: Focus on revising the topic '${pending.first.topicName}' for ${urgentExam.subject}."
+              );
+            } else {
+              focusRecommendations.add(
+                "Great work! You have completed all revision topics for ${urgentExam.subject}."
+              );
+            }
+          }
+
+          goalRecommendations.add(
+            "Study Target Recommendation: Dedicate ${urgentExam.dailyStudyGoalMinutes} minutes today to prepare for ${urgentExam.subject}."
+          );
+        }
+      }
+
+      // --- Knowledge Vault Recommendations Integration ---
+      if (notes.isEmpty) {
+        goalRecommendations.add(
+          "Knowledge Vault Suggestion: Create your first study guide or note under the Knowledge Vault to centralize your resources."
+        );
+      } else {
+        final studyNotes = notes.where((n) => n.category == 'Study Note').toList();
+        if (studyNotes.isNotEmpty) {
+          studyNotes.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+          final recentStudyNote = studyNotes.first;
+          focusRecommendations.add(
+            "Revision Recommendation: Spend 15 minutes reviewing your recent study note on '${recentStudyNote.title}'."
+          );
+        }
+        
+        goalRecommendations.add(
+          "Smart Note Suggestion: Categorize your ${notes.length} saved notes with tags to enable instant full-text filtering."
+        );
       }
 
       // --- 6. Streak Predictions ---

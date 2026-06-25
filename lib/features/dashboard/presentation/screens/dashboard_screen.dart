@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/widgets/app_progress_ring.dart';
 import '../../../activities/domain/models/activity_model.dart';
 import '../../../activities/presentation/providers/activity_providers.dart';
 import '../../../focus_timer/domain/models/focus_session_model.dart';
@@ -31,7 +33,10 @@ import '../../../brain_games/domain/models/game_model.dart';
 import '../../../habits/presentation/providers/habit_providers.dart';
 import '../../../student_hub/presentation/providers/student_providers.dart';
 import '../../../student_hub/domain/models/subject_model.dart';
-
+import '../../../knowledge_vault/presentation/providers/knowledge_providers.dart';
+import '../../../profile/domain/models/user_profile.dart';
+import '../../../exams/presentation/providers/exam_providers.dart';
+import '../../../student_ai/presentation/widgets/student_ai_quick_ask_widget.dart';
 
 
 class DashboardScreen extends ConsumerWidget {
@@ -49,7 +54,8 @@ class DashboardScreen extends ConsumerWidget {
     final challengesAsync = ref.watch(dailyChallengesStreamProvider);
     final brainGamesAsync = ref.watch(brainGamesStreamProvider);
     final unreadNotifCount = ref.watch(unreadCountProvider);
-
+    final subjectsAsync = ref.watch(subjectsStreamProvider);
+    final attendanceAsync = ref.watch(attendanceStreamProvider);
 
     final user = ref.read(firebaseAuthStateProvider).valueOrNull;
     if (user != null) {
@@ -68,6 +74,35 @@ class DashboardScreen extends ConsumerWidget {
 
     final streak = streakAsync.valueOrNull?.currentStreak ?? 0;
     final isWide = MediaQuery.of(context).size.width > 900;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Calculate dynamic values for progress rings
+    final subjects = subjectsAsync.valueOrNull ?? [];
+    final attendanceLogs = attendanceAsync.valueOrNull ?? [];
+    final goals = goalsAsync.valueOrNull ?? [];
+    final sessions = sessionsAsync.valueOrNull ?? [];
+
+    double attendanceRate = 1.0;
+    int totalPresents = 0;
+    int totalClasses = 0;
+    for (final s in subjects) {
+      final logs = attendanceLogs.where((l) => l.subjectId == s.id).toList();
+      final presents = logs.where((l) => l.status == 'present').length;
+      final absents = logs.where((l) => l.status == 'absent').length;
+      totalPresents += presents;
+      totalClasses += (presents + absents);
+    }
+    if (totalClasses > 0) {
+      attendanceRate = (totalPresents / totalClasses);
+    }
+
+    final completedGoals = goals.where((g) => g.isCompleted).length;
+    final goalsRate = goals.isNotEmpty ? completedGoals / goals.length : 1.0;
+
+    final todaySessions = sessions.where((s) => s.startTime.isAfter(today)).toList();
+    final todayFocusMinutes = todaySessions.where((s) => s.completed).fold<int>(0, (sum, s) => sum + s.durationMinutes);
+    final focusProgressRate = (todayFocusMinutes / 60.0).clamp(0.0, 1.0); // Daily target: 60 mins
 
     return Scaffold(
       appBar: AppBar(
@@ -111,45 +146,51 @@ class DashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- Greeting Header ---
-                profileAsync.whenOrNull(
-                      data: (profile) => Column(
+                // --- Premium Hero Welcome Banner ---
+                _buildHeroWelcomeSection(context, profileAsync, todayFocusMinutes, streak),
+                const SizedBox(height: 20),
+
+                // --- Quick Ask Student AI ---
+                const StudentAiQuickAskWidget(),
+                const SizedBox(height: 20),
+
+                // --- Core Stats Visualizers Row ---
+                isWide
+                    ? Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Welcome back, ${profile?.displayName.split(' ').first ?? 'User'} 👋',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -1.0,
-                            ),
-                          ),
-                          if (profile != null && profile.bio.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(
-                              profile.bio,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).hintColor,
-                              ),
-                            ),
-                          ],
+                          Expanded(child: _buildXPProgressCard(context, gamificationAsync)),
+                          const SizedBox(width: 20),
+                          Expanded(child: _buildProductivityScoreCard(context, sessions, profileAsync)),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildXPProgressCard(context, gamificationAsync),
+                          const SizedBox(height: 20),
+                          _buildProductivityScoreCard(context, sessions, profileAsync),
                         ],
                       ),
-                    ) ??
-                    const Text(
-                      'Welcome Back 👋',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -1.0,
+                const SizedBox(height: 20),
+
+                // --- Concentric Progress Rings & Weekly Heatmap ---
+                isWide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: _buildProgressRingsCard(context, focusProgressRate, goalsRate, attendanceRate)),
+                          const SizedBox(width: 20),
+                          Expanded(child: _buildWeeklyHeatmap(context, sessions)),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildProgressRingsCard(context, focusProgressRate, goalsRate, attendanceRate),
+                          const SizedBox(height: 20),
+                          _buildWeeklyHeatmap(context, sessions),
+                        ],
                       ),
-                    ),
-                const SizedBox(height: 16),
-                _buildXPProgressCard(context, gamificationAsync),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
                 // --- Grid Layout ---
                 isWide
@@ -185,6 +226,14 @@ class DashboardScreen extends ConsumerWidget {
                                 const SizedBox(height: 20),
                                 _buildStudentHubOverviewCard(context, ref),
                                 const SizedBox(height: 20),
+                                _buildUpcomingExamsWidget(context, ref),
+                                const SizedBox(height: 20),
+                                _buildRevisionProgressWidget(context, ref),
+                                const SizedBox(height: 20),
+                                _buildRecentNotesWidget(context, ref),
+                                const SizedBox(height: 20),
+                                _buildJournalStreakWidget(context, ref),
+                                const SizedBox(height: 20),
                                 _buildRecentRemindersCard(context, ref),
                                 const SizedBox(height: 20),
                                 _buildUpcomingScheduleCard(context, ref),
@@ -213,6 +262,14 @@ class DashboardScreen extends ConsumerWidget {
                           const SizedBox(height: 20),
                           _buildStudentHubOverviewCard(context, ref),
                           const SizedBox(height: 20),
+                          _buildUpcomingExamsWidget(context, ref),
+                          const SizedBox(height: 20),
+                          _buildRevisionProgressWidget(context, ref),
+                          const SizedBox(height: 20),
+                          _buildRecentNotesWidget(context, ref),
+                          const SizedBox(height: 20),
+                          _buildJournalStreakWidget(context, ref),
+                          const SizedBox(height: 20),
                           _buildRecentRemindersCard(context, ref),
                           const SizedBox(height: 20),
                           _buildUpcomingScheduleCard(context, ref),
@@ -234,6 +291,370 @@ class DashboardScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // --- PREMIUM REDESIGNED LAYOUT WIDGETS ---
+
+  Widget _buildHeroWelcomeSection(
+    BuildContext context,
+    AsyncValue<UserProfile?> profileAsync,
+    int todayFocusMinutes,
+    int streak,
+  ) {
+    final profile = profileAsync.valueOrNull;
+    final name = profile?.displayName.split(' ').first ?? 'Explorer';
+    final bio = profile?.bio.isNotEmpty == true ? profile!.bio : 'Your productive day, centralized.';
+    final now = DateTime.now();
+    final hour = now.hour;
+    final greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppColors.primaryGlow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  greeting,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            name,
+            style: AppTypography.displayMedium.copyWith(
+              color: Colors.white,
+              letterSpacing: -1.0,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            bio,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodySmall.copyWith(
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 20),
+          // Stats row
+          Row(
+            children: [
+              _buildHeroChip(
+                Icons.timer_outlined,
+                '$todayFocusMinutes min focused',
+                Colors.white.withValues(alpha: 0.15),
+              ),
+              const SizedBox(width: 10),
+              _buildHeroChip(
+                Icons.local_fire_department_rounded,
+                '$streak day streak',
+                Colors.white.withValues(alpha: 0.15),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroChip(IconData icon, String label, Color bg) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: Colors.white),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: Colors.white,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildProductivityScoreCard(
+    BuildContext context,
+    List<FocusSessionModel> sessions,
+    AsyncValue<UserProfile?> profileAsync,
+  ) {
+    final profile = profileAsync.valueOrNull;
+    double weeklyTargetHours = 20.0;
+    if (profile != null && profile.weeklyGoalHours > 0) {
+      weeklyTargetHours = profile.weeklyGoalHours;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? AppColors.darkSurfaceCard : AppColors.lightCard;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+    final weeklySessions = sessions.where((s) => s.startTime.isAfter(weekAgo) && s.completed).toList();
+    final double weeklyFocusHours = weeklySessions.fold<int>(0, (sum, s) => sum + s.durationMinutes) / 60.0;
+
+    final int score = weeklyTargetHours > 0
+        ? ((weeklyFocusHours / weeklyTargetHours) * 100.0).clamp(0.0, 100.0).toInt()
+        : 100;
+
+    Color scoreColor = AppColors.error;
+    String label = 'Needs Focus';
+    if (score >= 80) {
+      scoreColor = AppColors.success;
+      label = 'Elite Consistency';
+    } else if (score >= 50) {
+      scoreColor = AppColors.warning;
+      label = 'Stable Progress';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Productivity Score',
+            style: AppTypography.labelMedium.copyWith(color: AppColors.darkTextSecondary),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              AppProgressRing(
+                value: score / 100.0,
+                color: scoreColor,
+                backgroundColor: scoreColor.withValues(alpha: 0.1),
+                size: 72,
+                strokeWidth: 8,
+                child: Text(
+                  '$score',
+                  style: AppTypography.headingSmall.copyWith(color: textPrimary),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: scoreColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: scoreColor.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(label, style: AppTypography.labelSmall.copyWith(color: scoreColor)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${weeklyFocusHours.toStringAsFixed(1)} / ${weeklyTargetHours.toStringAsFixed(0)} hrs this week',
+                      style: AppTypography.caption.copyWith(color: AppColors.darkTextSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildProgressRingsCard(
+    BuildContext context,
+    double focusRate,
+    double goalsRate,
+    double attendanceRate,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? AppColors.darkSurfaceCard : AppColors.lightCard;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor),
+        boxShadow: AppColors.cardShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Progress Rings',
+            style: AppTypography.labelMedium.copyWith(color: AppColors.darkTextSecondary),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              AppTripleRing(
+                outerValue: focusRate,
+                middleValue: goalsRate,
+                innerValue: attendanceRate,
+                outerColor: AppColors.primary,
+                middleColor: AppColors.secondary,
+                innerColor: AppColors.accent,
+                outerSize: 90,
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildRingLegendRow('Focus Goal', focusRate, AppColors.primary, textPrimary),
+                    const SizedBox(height: 8),
+                    _buildRingLegendRow('Goals Track', goalsRate, AppColors.secondary, textPrimary),
+                    const SizedBox(height: 8),
+                    _buildRingLegendRow('Attendance', attendanceRate, AppColors.accent, textPrimary),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+
+  Widget _buildRingLegendRow(String label, double value, Color color, Color textPrimary) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTypography.bodySmall.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
+          ),
+        ),
+        Text(
+          '${(value * 100).toStringAsFixed(0)}%',
+          style: AppTypography.labelMedium.copyWith(color: color),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildWeeklyHeatmap(
+    BuildContext context,
+    List<FocusSessionModel> sessions,
+  ) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final weekdayIndices = List.generate(7, (i) => today.subtract(Duration(days: 6 - i)));
+    final dailyMins = weekdayIndices.map((day) {
+      final daySessions = sessions.where((s) {
+        final d = s.startTime;
+        return d.year == day.year && d.month == day.month && d.day == day.day && s.completed;
+      }).toList();
+      return daySessions.fold<int>(0, (sum, s) => sum + s.durationMinutes);
+    }).toList();
+
+    final dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      height: 154,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Weekly Focus Blocks',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(7, (i) {
+              final mins = dailyMins[i];
+              Color blockColor = AppColors.darkBorder.withValues(alpha: 0.3);
+              if (mins > 0) {
+                blockColor = AppColors.primary.withValues(alpha: (mins / 60.0).clamp(0.2, 1.0));
+              }
+
+              return Column(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: blockColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: mins > 0 ? AppColors.primary.withValues(alpha: 0.5) : AppColors.darkBorder,
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        mins > 0 ? '${mins}m' : '',
+                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    dayLabels[i],
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ],
       ),
     );
   }
@@ -362,47 +783,40 @@ class DashboardScreen extends ConsumerWidget {
     required IconData icon,
     required Color color,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? AppColors.darkSurfaceCard : AppColors.lightCard;
+    final borderColor = isDark ? AppColors.darkBorder : AppColors.lightBorder;
+    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+
     return Container(
       width: width,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.015),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: cardColor,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor),
+        boxShadow: AppColors.cardShadow,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 14),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Text(
             value,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: -0.6),
+            style: AppTypography.numericLarge.copyWith(color: textPrimary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: AppTypography.labelMedium.copyWith(color: AppColors.darkTextSecondary),
           ),
         ],
       ),
@@ -2348,6 +2762,446 @@ class DashboardScreen extends ConsumerWidget {
                 ],
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpcomingExamsWidget(BuildContext context, WidgetRef ref) {
+    final examsAsync = ref.watch(examsStreamProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.assignment_rounded, color: Colors.redAccent, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Upcoming Exams',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                onPressed: () => context.push('/exams'),
+                style: IconButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(28, 28),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          examsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: Colors.redAccent),
+              ),
+            ),
+            error: (err, _) => Text('Error loading exams: $err'),
+            data: (examsList) {
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final upcoming = examsList.where((e) {
+                final targetDate = DateTime(e.examDate.year, e.examDate.month, e.examDate.day);
+                return targetDate.isAfter(today) || targetDate.isAtSameMomentAs(today);
+              }).toList();
+
+              if (upcoming.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No upcoming exams scheduled.',
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                );
+              }
+
+              final nextExam = upcoming.first;
+              final remaining = nextExam.daysRemaining;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nextExam.subject,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Date: ${nextExam.examDate.day}/${nextExam.examDate.month}/${nextExam.examDate.year}',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            remaining == 0 ? 'TODAY' : '$remaining',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: remaining <= 2 ? Colors.redAccent : AppColors.primary,
+                            ),
+                          ),
+                          Text(
+                            remaining == 1 ? 'Day Left' : 'Days Left',
+                            style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRevisionProgressWidget(BuildContext context, WidgetRef ref) {
+    final examsAsync = ref.watch(examsStreamProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.analytics_rounded, color: Colors.purple, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Revision Progress',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          examsAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: Colors.purple),
+              ),
+            ),
+            error: (err, _) => Text('Error loading revision progress: $err'),
+            data: (examsList) {
+              if (examsList.isEmpty) {
+                return const Text(
+                  'No revision data available.',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                );
+              }
+
+              final now = DateTime.now();
+              final today = DateTime(now.year, now.month, now.day);
+              final upcoming = examsList.where((e) {
+                final targetDate = DateTime(e.examDate.year, e.examDate.month, e.examDate.day);
+                return targetDate.isAfter(today) || targetDate.isAtSameMomentAs(today);
+              }).toList();
+
+              if (upcoming.isEmpty) {
+                return const Text(
+                  'No upcoming exams to revise.',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                );
+              }
+
+              final primaryExam = upcoming.first;
+              final plansAsync = ref.watch(revisionPlansStreamProvider(primaryExam.id));
+
+              return plansAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Colors.purple, strokeWidth: 2),
+                ),
+                error: (err, _) => Text('Error: $err'),
+                data: (plansList) {
+                  if (plansList.isEmpty) {
+                    return Text(
+                      'No topics set for ${primaryExam.subject}. Go to details to add topics.',
+                      style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                    );
+                  }
+
+                  final completedCount = plansList.where((p) => p.isCompleted).length;
+                  final totalCount = plansList.length;
+                  final double percent = totalCount > 0 ? (completedCount / totalCount) : 0.0;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${primaryExam.subject} Syllabus',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '${(percent * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.purple),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: SizedBox(
+                          height: 6,
+                          child: LinearProgressIndicator(
+                            value: percent,
+                            backgroundColor: Colors.purple.withValues(alpha: 0.1),
+                            color: Colors.purple,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$completedCount of $totalCount topics completed',
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentNotesWidget(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(notesStreamProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.folder_copy_outlined, color: Colors.blueAccent, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Recent Notes',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                onPressed: () => context.go('/knowledge-vault'),
+                style: IconButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(28, 28),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          notesAsync.when(
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: CircularProgressIndicator(color: Colors.blueAccent),
+              ),
+            ),
+            error: (err, _) => Text('Error: $err'),
+            data: (notesList) {
+              if (notesList.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'No recent notes. Create your first note in the Knowledge Vault!',
+                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                  ),
+                );
+              }
+
+              final recents = notesList.take(3).toList();
+
+              return Column(
+                children: recents.map((note) {
+                  return Card(
+                    elevation: 0,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    color: Theme.of(context).cardColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: Colors.grey.shade100),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      title: Text(
+                        note.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        note.category,
+                        style: const TextStyle(fontSize: 10, color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded, size: 16),
+                      onTap: () => context.push('/knowledge-vault/notes/${note.id}'),
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJournalStreakWidget(BuildContext context, WidgetRef ref) {
+    final streak = ref.watch(journalStreakProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.book_outlined, color: Colors.orangeAccent, size: 18),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Journal reflections',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
+                onPressed: () => context.push('/knowledge-vault/journal'),
+                style: IconButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(28, 28),
+                ),
+              ),
+            ],
+          ),
+          const Divider(height: 20),
+          Row(
+            children: [
+              const Text(
+                '🔥',
+                style: TextStyle(fontSize: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$streak Day Streak',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Reflect daily to build continuous memory logs.',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => context.push('/knowledge-vault/journal'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              minimumSize: const Size(double.infinity, 36),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text(
+              'Write Today\'s Reflection',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

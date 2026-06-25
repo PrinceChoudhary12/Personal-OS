@@ -26,6 +26,15 @@ import '../../features/daily_challenges/presentation/screens/daily_challenges_sc
 import '../../features/brain_games/presentation/screens/brain_games_screen.dart';
 import '../../features/habits/presentation/screens/habits_screen.dart';
 import '../../features/student_hub/presentation/screens/student_hub_screen.dart';
+import '../../features/exams/presentation/screens/exams_screen.dart';
+import '../../features/exams/presentation/screens/create_edit_exam_screen.dart';
+import '../../features/exams/presentation/screens/exam_detail_screen.dart';
+import '../../features/knowledge_vault/presentation/screens/knowledge_vault_screen.dart';
+import '../../features/knowledge_vault/presentation/screens/note_detail_screen.dart';
+import '../../features/knowledge_vault/presentation/screens/create_edit_note_screen.dart';
+import '../../features/knowledge_vault/presentation/screens/journal_screen.dart';
+import '../../features/student_ai/presentation/screens/student_ai_screen.dart';
+import '../../features/admin/presentation/screens/admin_panel_screen.dart';
 import 'navigation_scaffold.dart';
 import 'router_notifier.dart';
 
@@ -104,6 +113,46 @@ final routerProvider = Provider<GoRouter>((ref) {
           return CreateEditGoalScreen(editGoalId: id);
         },
       ),
+      GoRoute(
+        path: '/exams/create',
+        builder: (context, state) => const CreateEditExamScreen(),
+      ),
+      GoRoute(
+        path: '/exams/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateEditExamScreen(editExamId: id);
+        },
+      ),
+      GoRoute(
+        path: '/exams/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return ExamDetailScreen(examId: id);
+        },
+      ),
+      GoRoute(
+        path: '/knowledge-vault/notes/create',
+        builder: (context, state) => const CreateEditNoteScreen(),
+      ),
+      GoRoute(
+        path: '/knowledge-vault/notes/edit/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CreateEditNoteScreen(editNoteId: id);
+        },
+      ),
+      GoRoute(
+        path: '/knowledge-vault/notes/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return NoteDetailScreen(noteId: id);
+        },
+      ),
+      GoRoute(
+        path: '/knowledge-vault/journal',
+        builder: (context, state) => const JournalScreen(),
+      ),
 
       // ── Protected Shell (bottom nav tabs) ─────────────────────────────────
       ShellRoute(
@@ -167,6 +216,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/student-hub',
             builder: (context, state) => const StudentHubScreen(),
+          ),
+          GoRoute(
+            path: '/exams',
+            builder: (context, state) => const ExamsScreen(),
+          ),
+          GoRoute(
+            path: '/knowledge-vault',
+            builder: (context, state) => const KnowledgeVaultScreen(),
+          ),
+          GoRoute(
+            path: '/student-ai',
+            builder: (context, state) => const StudentAiScreen(),
+          ),
+          GoRoute(
+            path: '/admin',
+            builder: (context, state) => const AdminPanelScreen(),
           ),
         ],
       ),

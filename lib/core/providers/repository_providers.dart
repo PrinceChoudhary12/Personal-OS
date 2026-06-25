@@ -23,6 +23,10 @@ import '../../features/habits/data/repositories/firestore_habit_repository.dart'
 import '../../features/habits/domain/repositories/habit_repository.dart';
 import '../../features/student_hub/data/repositories/firestore_student_repository.dart';
 import '../../features/student_hub/domain/repositories/student_repository.dart';
+import '../../features/exams/data/repositories/firestore_exam_repository.dart';
+import '../../features/exams/domain/repositories/exam_repository.dart';
+import '../../features/knowledge_vault/data/repositories/firestore_knowledge_repository.dart';
+import '../../features/knowledge_vault/domain/repositories/knowledge_repository.dart';
 
 // ── Firestore Implementations ──────────────────────────────────────────────────
 
@@ -60,6 +64,14 @@ final habitRepositoryProvider = Provider<HabitRepository>((ref) {
 
 final studentRepositoryProvider = Provider<StudentRepository>((ref) {
   return FirestoreStudentRepository();
+});
+
+final examRepositoryProvider = Provider<ExamRepository>((ref) {
+  return FirestoreExamRepository();
+});
+
+final knowledgeRepositoryProvider = Provider<KnowledgeRepository>((ref) {
+  return FirestoreKnowledgeRepository();
 });
 
 
